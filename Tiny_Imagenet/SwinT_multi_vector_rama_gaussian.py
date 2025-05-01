@@ -13,10 +13,12 @@ import torch.optim as optim
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
-from torchvision.models import efficientnet_b2
+from torchvision.models import swin_t
 from bayes_opt import BayesianOptimization, acquisition
 from tqdm import tqdm
 import math
+
+from datasets import load_dataset
 
 logging.basicConfig(
     level=logging.INFO,
@@ -93,16 +95,19 @@ class GaussianRAMALayer(nn.Module):
             out = torch.sigmoid(out)
         return out
 
-class EfficientNet(nn.Module):
+
+class SwinT(nn.Module):
     """
-    Modified EfficientNet-B2 architecture with Gaussian RAMA layers at multiple positions.
+    Modified SwinT architecture with Gaussian RAMA layers at multiple positions.
     
     Args:
-        num_classes (int): Number of output classes. Default: 10.
+        block (nn.Module): Block type to use for the network.
+        num_blocks (List[int]): Number of blocks in each layer.
+        num_classes (int): Number of output classes. Default: 200.
         use_rama (bool): Whether to use RAMA layers. Default: False.
         rama_config (dict): Configuration for RAMA layers. Default: None.
     """
-    def __init__(self, num_classes=10, use_rama=False, rama_config=None):
+    def __init__(self, num_classes=200, use_rama=False, rama_config=None):
         super().__init__()
         
         self.use_rama = use_rama
@@ -115,10 +120,10 @@ class EfficientNet(nn.Module):
                     "sqrt_dim": False,
                 }
             
-        self.backbone = efficientnet_b2(weights=None)
-        self.feature_dim = self.backbone.classifier[1].in_features
+        self.backbone = swin_t(weights=None)
+        self.feature_dim = self.backbone.head.in_features
 
-        self.features_1 = nn.Sequential(*list(self.backbone.children())[:-1]) 
+        self.features = nn.Sequential(*list(self.backbone.children())[:-1]) 
         
         # Create Gaussian RAMA layer before the linear layer in the network
         if use_rama:
@@ -131,13 +136,7 @@ class EfficientNet(nn.Module):
                 rama_config.get('sqrt_dim', False),
             )
 
-        # Dropout và Linear
-        self.dropout = nn.Dropout(p=0.3, inplace=False)
         self.fc = nn.Linear(self.feature_dim, num_classes)
-        self.features_2 = nn.Sequential(
-            self.dropout,
-            self.fc
-        )
         
         # Initialize hooks for feature extraction
         self.hooks = []
@@ -145,10 +144,8 @@ class EfficientNet(nn.Module):
         self.after_rama_features = None
 
     def forward(self, x, lambda_value):
-        """Forward pass through the EfficientNet-B2 model with Gaussian RAMA layers."""
-        out = self.features_1(x)
-
-        out = torch.flatten(out, 1)
+        """Forward pass through the Swin_T model with Gaussian RAMA layers."""
+        out = self.features(x)
 
         # Store features before RAMA for evaluation
         if self.use_rama:
@@ -158,8 +155,8 @@ class EfficientNet(nn.Module):
         if self.use_rama:
             out = self.rama_linearLayer(out, lambda_value)
             self.after_rama_features = out.detach().clone()
-
-        out = self.features_2(out)
+            
+        out = self.fc(out)
         
         return out
 
@@ -177,65 +174,77 @@ class EfficientNet(nn.Module):
 
 class DataManager:
     """
-    Manager for CIFAR-10 dataset preparation and loading.
+    Manager for Tiny ImageNet (zh-plus/tiny-imagenet) via Hugging Face Datasets.
     
     Args:
-        data_dir (str): Directory to store/load dataset.
         batch_size (int): Batch size for data loaders.
         num_workers (int): Number of workers for data loading. Default: 2.
     """
-    def __init__(self, data_dir, batch_size, num_workers=2):
-        self.data_dir = data_dir
+    def __init__(self, batch_size, num_workers=2):
         self.batch_size = batch_size
         self.num_workers = num_workers
+
+        # Standard ImageNet transforms for Tiny ImageNet (64x64)
         self.transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.RandomCrop(64, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]
+            )
         ])
-        
-        self.transform_test = transforms.Compose([
+
+        self.transform_valid = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]
+            )
         ])
-        
+
     def get_loaders(self):
         """
-        Get data loaders for training and testing.
-        
         Returns:
-            tuple: (train_loader, test_loader)
+            train_loader, valid_loader (torch.utils.data.DataLoader)
         """
-        # Training dataset.
-        trainset = torchvision.datasets.CIFAR10(
-            root=self.data_dir, 
-            train=True, 
-            download=True, 
-            transform=self.transform_train
+        ds = load_dataset("zh-plus/tiny-imagenet")
+        train_ds = ds["train"]
+        valid_ds = ds["valid"]
+
+        def _transform_train(example):
+            return {
+                "pixel_values": self.transform_train(example["image"]),
+                "labels": example["label"]
+            }
+
+        def _transform_valid(example):
+            return {
+                "pixel_values": self.transform_valid(example["image"]),
+                "labels": example["label"]
+            }
+
+        train_ds = train_ds.with_transform(_transform_train)
+        valid_ds = valid_ds.with_transform(_transform_valid)
+
+        train_ds.set_format(type="torch", columns=["pixel_values", "labels"])
+        valid_ds.set_format(type="torch", columns=["pixel_values", "labels"])
+
+        train_loader = torch.utils.data.DataLoader(
+            train_ds,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers
         )
-        trainloader = torch.utils.data.DataLoader(
-            trainset, 
-            batch_size=self.batch_size, 
-            shuffle=True, 
+        valid_loader = torch.utils.data.DataLoader(
+            valid_ds,
+            batch_size=self.batch_size,
+            shuffle=False,
             num_workers=self.num_workers
         )
 
-        # Testing dataset.
-        testset = torchvision.datasets.CIFAR10(
-            root=self.data_dir, 
-            train=False, 
-            download=True, 
-            transform=self.transform_test
-        )
-        testloader = torch.utils.data.DataLoader(
-            testset, 
-            batch_size=self.batch_size, 
-            shuffle=False, 
-            num_workers=self.num_workers
-        )
-        return trainloader, testloader
-
+        return train_loader, valid_loader
+    
 
 class Trainer:
     """
@@ -676,7 +685,7 @@ class Trainer:
 
 def get_experiment_name(args: argparse.Namespace) -> str:
     """Generate a unique experiment name based on configuration."""
-    exp_name = "EfficientNet_B2"
+    exp_name = "SwinT"
     exp_name += "_GaussianRAMA" if args.use_rama else "_NoRAMA"
     
     if args.use_rama:
@@ -722,7 +731,7 @@ def set_seed(seed):
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training with EfficientNet and Gaussian RAMA Layers')
+    parser = argparse.ArgumentParser(description='PyTorch Tiny ImageNet Training with SwinT and Gaussian RAMA Layers')
     
     # Training parameters
     parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
@@ -737,7 +746,7 @@ def parse_args():
     # Gaussian RAMA configuration
     parser.add_argument('--use-rama', action='store_true', help='whether to use RAMA layers')
     parser.add_argument('--use-hyperparameter-optimization', action='store_true', help='whether to use Bayesian optimization for p-value')
-    parser.add_argument('--lambda-value', default=0.05, type=float, help='Lambda_value for RAMA')
+    parser.add_argument('--lambda-value', default=1.0, type=float, help='Lambda_value for RAMA')
     parser.add_argument('--sqrt-dim', default= False, help='Whether multiply with sqrt(d) or not')
     parser.add_argument('--use-normalization', action='store_true', help='use layer normalization in RAMA layers')
     parser.add_argument('--activation', default='relu', choices=['relu', 'leaky_relu', 'tanh', 'sigmoid'],
@@ -786,8 +795,8 @@ def main():
     }
     
     # Create model
-    model = EfficientNet(
-        num_classes=10, 
+    model = SwinT(
+        num_classes=200, 
         use_rama=args.use_rama,
         rama_config=rama_config
     ).to(device)
