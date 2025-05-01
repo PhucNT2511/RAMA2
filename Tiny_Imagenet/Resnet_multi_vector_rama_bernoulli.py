@@ -16,7 +16,7 @@ import torchvision.transforms as transforms
 from bayes_opt import BayesianOptimization, acquisition
 from tqdm import tqdm
 import math
-
+from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 
 logging.basicConfig(
@@ -182,7 +182,7 @@ class ResNet(nn.Module):
         )
         
         # Create standard ResNet blocks
-        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1) 
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
@@ -236,7 +236,7 @@ class ResNet(nn.Module):
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
         """Create a ResNet layer with the specified number of blocks."""
-        strides = [stride] + [1] * (num_blocks - 1)
+        strides = [stride] + [1] * (num_blocks - 1) # [2] + [1] * (2-1) = [2] + [1] = [2,1]
         layers = []
         for stride in strides:
             layers.append(block(self.in_channels, out_channels, stride))
@@ -245,11 +245,11 @@ class ResNet(nn.Module):
 
     def forward(self, x, p_value):
         """Forward pass through the ResNet model with Bernoulli RAMA layers."""
-        out = self.conv1(x)
-        out = self.layer1(out)
+        out = self.conv1(x) #(B,64,64,64)
+        out = self.layer1(out) #(B,64,64,64)
         
         # After layer 1
-        out = self.layer2(out)
+        out = self.layer2(out) #(B,128,32,32)
         
         # # Apply RAMA after layer2 (early in the network)
         # if self.use_rama:
@@ -260,7 +260,7 @@ class ResNet(nn.Module):
         #     # Broadcast back to spatial dimensions
         #     out = out * out_flat.view(batch_size, channels, 1, 1)
 
-        out = self.layer3(out)
+        out = self.layer3(out) #(B,256,16,16)
         
         # # Apply RAMA after layer3 (middle of the network)
         # if self.use_rama:
@@ -269,8 +269,8 @@ class ResNet(nn.Module):
         #     out_flat = self.rama_layer3(out_flat, p_value)
         #     out = out * out_flat.view(batch_size, channels, 1, 1)
             
-        out = self.layer4(out)
-        out = F.avg_pool2d(out, 4)
+        out = self.layer4(out) #(B,512,8,8)
+        out = F.avg_pool2d(out, 8)
         out = out.view(out.size(0), -1)
         
         # Store features before RAMA for evaluation
@@ -297,80 +297,59 @@ class ResNet(nn.Module):
         else:
             return outputs, None, None
 
+class TinyImageNetDataset(Dataset):
+    def __init__(self, split, transform=None):
+        ds = load_dataset("zh-plus/tiny-imagenet", split=split)
+        self.images = ds["image"]
+        self.labels = ds["label"]
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        img = self.images[idx]
+
+        if self.transform:
+            img = self.transform(img)
+
+        label = self.labels[idx]
+        return img, label
 
 class DataManager:
     """
     Manager for Tiny ImageNet (zh-plus/tiny-imagenet) via Hugging Face Datasets.
-    
-    Args:
-        batch_size (int): Batch size for data loaders.
-        num_workers (int): Number of workers for data loading. Default: 2.
     """
     def __init__(self, batch_size, num_workers=2):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-        # Standard ImageNet transforms for Tiny ImageNet (64x64)
         self.transform_train = transforms.Compose([
+            transforms.Lambda(lambda img: img.convert("RGB") if img.mode != "RGB" else img),
             transforms.RandomCrop(64, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
         ])
 
         self.transform_valid = transforms.Compose([
+            transforms.Lambda(lambda img: img.convert("RGB") if img.mode != "RGB" else img),
             transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
         ])
 
     def get_loaders(self):
-        """
-        Returns:
-            train_loader, valid_loader (torch.utils.data.DataLoader)
-        """
-        ds = load_dataset("zh-plus/tiny-imagenet")
-        train_ds = ds["train"]
-        valid_ds = ds["valid"]
+        train_set = TinyImageNetDataset(split="train", transform=self.transform_train)
+        valid_set = TinyImageNetDataset(split="valid", transform=self.transform_valid)
 
-        def _transform_train(example):
-            return {
-                "pixel_values": self.transform_train(example["image"]),
-                "labels": example["label"]
-            }
-
-        def _transform_valid(example):
-            return {
-                "pixel_values": self.transform_valid(example["image"]),
-                "labels": example["label"]
-            }
-
-        train_ds = train_ds.with_transform(_transform_train)
-        valid_ds = valid_ds.with_transform(_transform_valid)
-
-        train_ds.set_format(type="torch", columns=["pixel_values", "labels"])
-        valid_ds.set_format(type="torch", columns=["pixel_values", "labels"])
-
-        train_loader = torch.utils.data.DataLoader(
-            train_ds,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.num_workers
-        )
-        valid_loader = torch.utils.data.DataLoader(
-            valid_ds,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers
-        )
+        train_loader = DataLoader(train_set, batch_size=self.batch_size,
+                                  shuffle=True, num_workers=self.num_workers)
+        valid_loader = DataLoader(valid_set, batch_size=self.batch_size,
+                                  shuffle=False, num_workers=self.num_workers)
 
         return train_loader, valid_loader
-
 
 class Trainer:
     """
@@ -481,6 +460,7 @@ class Trainer:
         total = 0
         pbar = tqdm(self.trainloader, desc="Training")
         for batch_idx, (inputs, targets) in enumerate(pbar):
+            print(type(inputs), type(targets))
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
             outputs = self.model.forward(inputs, p_value=p_value)
