@@ -71,7 +71,7 @@ def parse_args():
     parser.add_argument('--activation', default='silu', choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'silu'],
                         help='activation function for RAMA layers')
     parser.add_argument('--evolution-rate', default=0.1, type=float, help='Rate at which RAMA mask evolves')
-    
+
     # RAMA position configuration
     parser.add_argument('--rama-positions', default='layer1,layer2,layer3,final',
                        type=str, help='comma-separated list of positions to apply RAMA (options: layer1,layer2,layer3,layer4,final)')
