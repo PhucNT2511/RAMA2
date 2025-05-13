@@ -15,13 +15,14 @@ from torch.autograd import Variable
 # from preact_resnet import PreActResNet18
 from utils import *
 from Feature_model.feature_resnet import *
+from Feature_model.feature_efficientnet import *
 from torchvision import datasets, transforms
 import torch.nn.functional as F
 import torch.utils.data as data
 from tqdm import tqdm
 
-NEPTUNE_PRJ_NAME = os.getenv("NEPTUNE_PROJECT")
-NEPTUNE_API_TOKEN = os.getenv("NEPTUNE_API_TOKEN")
+NEPTUNE_PRJ_NAME = "phuca1tt1bn/RAMA"
+NEPTUNE_API_TOKEN = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI5ODZlNDU0Yy1iMDk0LTQ5MDEtOGNiYi00OTZlYTY4ODI0MzgifQ=="
 
 
 def get_experiment_name(args):
@@ -330,6 +331,12 @@ def main():
             rama_positions=rama_positions,
             rama_type='bernoulli'
         )
+    elif args.model == "EfficientNet":
+        model_test = Feature_EfficientNet(
+            use_rama=args.use_rama,
+            rama_config=rama_config,
+            rama_positions=rama_positions,
+        ).cuda()
     model = model.cuda()
     model.train()
     teacher_model = EMA(model)
@@ -486,6 +493,12 @@ def main():
                 rama_config=rama_config,
                 rama_positions=rama_positions,
                 rama_type='bernoulli'
+            ).cuda()
+        elif args.model == "EfficientNet":
+            model_test = Feature_EfficientNet(
+                use_rama=args.use_rama,
+                rama_config=rama_config,
+                rama_positions=rama_positions,
             ).cuda()
 
         model_test.load_state_dict(teacher_model.model.state_dict())
