@@ -21,8 +21,8 @@ import torch.nn.functional as F
 import torch.utils.data as data
 from tqdm import tqdm
 
-NEPTUNE_PRJ_NAME = "phuca1tt1bn/RAMA"
-NEPTUNE_API_TOKEN = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI5ODZlNDU0Yy1iMDk0LTQ5MDEtOGNiYi00OTZlYTY4ODI0MzgifQ=="
+NEPTUNE_PRJ_NAME = os.getenv("NEPTUNE_PROJECT", default=None)
+NEPTUNE_API_TOKEN = os.getenv("NEPTUNE_API_TOKEN", default=None)
 
 
 def get_experiment_name(args):
@@ -335,7 +335,8 @@ def main():
         model = Feature_EfficientNet(
             use_rama=args.use_rama,
             rama_config=rama_config,
-        ).cuda()
+        )
+
     model = model.cuda()
     model.train()
     teacher_model = EMA(model)
@@ -496,7 +497,7 @@ def main():
         elif args.model == "EfficientNet":
             model_test = Feature_EfficientNet(
                 use_rama=args.use_rama,
-                rama_config=rama_config,
+                rama_config=rama_config
             ).cuda()
 
         model_test.load_state_dict(teacher_model.model.state_dict())
