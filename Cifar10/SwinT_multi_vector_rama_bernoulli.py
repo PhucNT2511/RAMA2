@@ -47,14 +47,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training with Improved SwinT and Bernoulli RAMA Layers')
     
     # Training parameters
-    parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
-    parser.add_argument('--epochs', default=50, type=int, help='number of epochs')
+    parser.add_argument('--lr', default=5e-4, type=float, help='learning rate')
+    parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--batch-size', default=128, type=int, help='batch size')
     parser.add_argument('--data-dir', default='./data', help='data directory')
     parser.add_argument('--checkpoint-dir', default='./checkpoints', help='checkpoint directory')
     parser.add_argument('--resume', action='store_true', help='resume from checkpoint')
     parser.add_argument('--num-workers', default=2, type=int, help='number of data loading workers')
     parser.add_argument('--seed', type=int, default=42, help='random seed')
+    parser.add_argument('--weight-decay', default=0.1, type=float, help='weight decay for AdamW optimizer')
     
     # RAMA configuration
     parser.add_argument('--use-rama', action='store_true', help='whether to use RAMA layers')
@@ -81,6 +82,17 @@ def parse_args():
     parser.add_argument('--bayes-xi', default=0.01, type=float, help='exploration-exploitation parameter for ei/poi')
     parser.add_argument('--bayes-kappa', default=2.5, type=float, help='exploration-exploitation parameter for ucb')
     parser.add_argument('--optimize-every', default=5, type=int, help='baseline optimization frequency (in epochs)')
+
+    # Adversarial evaluation parameters
+    parser.add_argument('--eval-fgsm', action='store_true', help='Evaluate with FGSM attack')
+    parser.add_argument('--eval-pgd', action='store_true', help='Evaluate with PGD attack')
+    parser.add_argument('--adv-epsilon', default=8/255, type=float, help='Epsilon for FGSM and PGD attacks')
+    parser.add_argument('--pgd-alpha', default=2/255, type=float, help='Alpha (step size) for PGD attack')
+    parser.add_argument('--pgd-iter', default=10, type=int, help='Number of iterations for PGD attack')
+    parser.add_argument('--adversarial-training', default=None, choices=[None, 'fgsm', 'pgd'], 
+                        type=lambda x: x if x else None, # Allows 'None' string to be parsed as None type
+                        help='Enable adversarial training with the specified attack (None, fgsm, pgd)')
+
     return parser.parse_args()
 
 
@@ -131,11 +143,10 @@ def main():
 
     # Loss function and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(
+    optimizer = optim.AdamW(
         model.parameters(), 
         lr=args.lr, 
-        momentum=0.9, 
-        weight_decay=5e-4
+        weight_decay=args.weight_decay
     )
     
     # Learning rate scheduler for better convergence
@@ -201,7 +212,13 @@ def main():
         use_hyperparameter_optimization=args.use_hyperparameter_optimization,
         neptune_run=neptune_run,
         writer=writer,
-        scheduler=scheduler
+        scheduler=scheduler,
+        eval_fgsm=args.eval_fgsm,
+        eval_pgd=args.eval_pgd,  
+        adv_epsilon=args.adv_epsilon,
+        pgd_alpha=args.pgd_alpha,
+        pgd_iter=args.pgd_iter,
+        adversarial_training_attack=args.adversarial_training
     )
     
     # Set best accuracy if resuming

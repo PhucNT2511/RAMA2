@@ -444,6 +444,9 @@ def main():
             adv_acc = (output.max(1)[1] == y).sum().item()
             clean_acc = (adv_output.max(1)[1] == y).sum().item()
             train_n += y.size(0)
+            
+            # logger.info("*"*300)
+            # logger.info(f"Epoch {epoch}, Batch {i}, Loss: {loss.item()}, Train Acc: {train_acc / train_n}, Adv Acc: {adv_acc / train_n}, Clean Acc: {clean_acc / train_n}, Ratio: {adv_acc / (clean_acc + 1e-10)}, EMA: {args.EMA_value}")
             if adv_acc / (clean_acc + 1e-10) < args.EMA_value:
                 teacher_model.update_params(model)
                 teacher_model.apply_shadow()

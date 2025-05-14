@@ -87,6 +87,17 @@ def parse_args():
     parser.add_argument('--bayes-xi', default=0.01, type=float, help='exploration-exploitation parameter for ei/poi')
     parser.add_argument('--bayes-kappa', default=2.5, type=float, help='exploration-exploitation parameter for ucb')
     parser.add_argument('--optimize-every', default=5, type=int, help='optimize P every N epochs')
+
+    # Adversarial evaluation parameters
+    parser.add_argument('--eval-fgsm', action='store_true', help='Evaluate with FGSM attack')
+    parser.add_argument('--eval-pgd', action='store_true', help='Evaluate with PGD attack')
+    parser.add_argument('--adv-epsilon', default=8/255, type=float, help='Epsilon for FGSM and PGD attacks')
+    parser.add_argument('--pgd-alpha', default=2/255, type=float, help='Alpha (step size) for PGD attack')
+    parser.add_argument('--pgd-iter', default=10, type=int, help='Number of iterations for PGD attack')
+    parser.add_argument('--adversarial-training', default=None, choices=[None, 'fgsm', 'pgd'], 
+                        type=lambda x: x if x else None, 
+                        help='Enable adversarial training with the specified attack (None, fgsm, pgd)')
+
     return parser.parse_args()
 
 
@@ -212,7 +223,14 @@ def main():
         use_rama=args.use_rama,
         use_hyperparameter_optimization=args.use_hyperparameter_optimization,
         neptune_run=neptune_run,
-        writer=writer
+        writer=writer,
+        # Pass adversarial evaluation and training args
+        eval_fgsm=args.eval_fgsm,
+        eval_pgd=args.eval_pgd,
+        adv_epsilon=args.adv_epsilon,
+        pgd_alpha=args.pgd_alpha,
+        pgd_iter=args.pgd_iter,
+        adversarial_training_attack=args.adversarial_training
     )
     
     # Set best accuracy if resuming
