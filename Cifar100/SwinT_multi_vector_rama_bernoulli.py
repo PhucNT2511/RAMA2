@@ -453,7 +453,7 @@ class Trainer:
         _, test_acc = self.evaluate(p_value)
         return test_acc  # Return only accuracy for optimization
 
-    def evaluate_with_metrics(self, p_value=None, epoch=None):
+    def evaluate_with_metrics(self, p_value=None, epoch=None, test_acc=None, total_epochs=None):
         """
         Evaluate the model with additional metrics to understand RAMA impact.
         
@@ -495,23 +495,24 @@ class Trainer:
                 # Define a model wrapper for attack functions that handles p_value
                 attack_model_wrapper = lambda imgs_for_attack: self.model.forward(imgs_for_attack, p_value=current_p_for_eval)
 
-                # FGSM Attack Evaluation
-                if self.args and self.args.eval_fgsm:
-                    adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
-                    outputs_fgsm = self.model.forward(adv_images_fgsm, p_value=current_p_for_eval)
-                    _, predicted_fgsm = outputs_fgsm.max(1)
-                    total_fgsm += targets.size(0)
-                    correct_fgsm += predicted_fgsm.eq(targets).sum().item()
+                if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == total_epochs - 1):
+                    # FGSM Attack Evaluation
+                    if self.args and self.args.eval_fgsm:
+                        adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
+                        outputs_fgsm = self.model.forward(adv_images_fgsm, p_value=current_p_for_eval)
+                        _, predicted_fgsm = outputs_fgsm.max(1)
+                        total_fgsm += targets.size(0)
+                        correct_fgsm += predicted_fgsm.eq(targets).sum().item()
 
-                # PGD Attack Evaluation
-                if self.args and self.args.eval_pgd:
-                    adv_images_pgd = pgd_attack(attack_model_wrapper, inputs.clone(), targets, 
-                                                self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
-                                                self.device, clamp_min=-10.0, clamp_max=10.0) # Wide clamps for normalized data
-                    outputs_pgd = self.model.forward(adv_images_pgd, p_value=current_p_for_eval)
-                    _, predicted_pgd = outputs_pgd.max(1)
-                    total_pgd += targets.size(0)
-                    correct_pgd += predicted_pgd.eq(targets).sum().item()
+                    # PGD Attack Evaluation
+                    if self.args and self.args.eval_pgd:
+                        adv_images_pgd = pgd_attack(attack_model_wrapper, inputs.clone(), targets, 
+                                                    self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
+                                                    self.device, clamp_min=-10.0, clamp_max=10.0) # Wide clamps for normalized data
+                        outputs_pgd = self.model.forward(adv_images_pgd, p_value=current_p_for_eval)
+                        _, predicted_pgd = outputs_pgd.max(1)
+                        total_pgd += targets.size(0)
+                        correct_pgd += predicted_pgd.eq(targets).sum().item()
 
                 eval_desc = f"Clean Acc: {100.*correct/total:.2f}%"
                 if self.args and self.args.eval_fgsm:
@@ -698,7 +699,7 @@ class Trainer:
             
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
             # if epoch % 5 == 0 or epoch == epochs - 1:
-            metrics = self.evaluate_with_metrics(p_value=self.best_p, epoch=epoch)
+            metrics = self.evaluate_with_metrics(p_value=self.best_p, epoch=epoch, test_acc=test_acc, total_epochs=epochs)
             if 'feature_metrics' in metrics and metrics['feature_metrics']:
                 feature_metrics = metrics['feature_metrics']
                 logger.info(f"Feature metrics at epoch {epoch+1}:")

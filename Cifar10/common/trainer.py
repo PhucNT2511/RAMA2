@@ -426,12 +426,12 @@ class Trainer:
             # Adversarial Evaluation if enabled
             fgsm_acc, pgd_acc = -1.0, -1.0 # Default if not evaluated
             fgsm_loss, pgd_loss = -1.0, -1.0
+            if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == epochs - 1):
+                if self.eval_fgsm:
+                    fgsm_loss, fgsm_acc = self.evaluate_fgsm(p_value=self.best_p)
 
-            if self.eval_fgsm:
-                fgsm_loss, fgsm_acc = self.evaluate_fgsm(p_value=self.best_p)
-            
-            if self.eval_pgd:
-                pgd_loss, pgd_acc = self.evaluate_pgd(p_value=self.best_p)
+                if self.eval_pgd:
+                    pgd_loss, pgd_acc = self.evaluate_pgd(p_value=self.best_p)
 
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
             if epoch % 5 == 0 or epoch == epochs - 1:
@@ -533,26 +533,22 @@ class Trainer:
             is_best = test_acc > self.best_acc
             if is_best:
                 self.best_acc = test_acc
-            
-            # Prepare checkpoint state
-            checkpoint_state = {
-                "epoch": epoch,
-                "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "best_acc": self.best_acc,
-                "best_p": self.best_p,
-            }
-            
-            # Add scheduler state if it exists
-            if self.scheduler:
-                checkpoint_state["scheduler_state_dict"] = self.scheduler.state_dict()
+                checkpoint_state = {
+                    "epoch": epoch,
+                    "model_state_dict": self.model.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "best_acc": self.best_acc,
+                    "best_p": self.best_p,
+                }
+                # Add scheduler state if it exists
+                if self.scheduler:
+                    checkpoint_state["scheduler_state_dict"] = self.scheduler.state_dict()
+                self.save_checkpoint(checkpoint_state, is_best)
                 
-            self.save_checkpoint(checkpoint_state, is_best)
-            
-            # Save Bayesian optimization state
-            if self.use_rama and self.use_hyperparameter_optimization:
-                bayes_opt_path = os.path.join(self.checkpoint_dir, 'bayes_opt_state.json')
-                self.bayesian_optimizer.save_state(bayes_opt_path)
+                # Save Bayesian optimization state
+                if self.use_rama and self.use_hyperparameter_optimization:
+                    bayes_opt_path = os.path.join(self.checkpoint_dir, 'bayes_opt_state.json')
+                    self.bayesian_optimizer.save_state(bayes_opt_path)
                 
         logger.info(f"Best test accuracy: {self.best_acc:.2f}%")
         return self.best_acc
