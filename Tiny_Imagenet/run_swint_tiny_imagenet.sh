@@ -6,7 +6,7 @@ EVAL_PGD=true
 AT_MODE_PGD="--at-attack pgd --at-epsilon 0.03 --at-alpha 0.01 --at-iter 7" # AT PGD specific params
 
 # --- Base command arguments (common to all Swin-T runs on Tiny ImageNet) ---
-BASE_ARGS="--epochs 50 --lr 0.001 --batch-size 32 --seed 42 --checkpoint-dir ./checkpoints_tiny_imagenet/SwinT" # Adjusted batch-size & LR for SwinT
+BASE_ARGS="--epochs 100 --lr 0.001 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_tiny_imagenet/SwinT"
 DATASET_ARGS="--data-dir ./data_tiny_imagenet"
 
 # --- Constructing Evaluation Flags ---
@@ -25,7 +25,7 @@ ADVERSARIAL_TRAINING_FLAGS_PGD="--adversarial-training $AT_MODE_PGD"
 # Swin-T Bernoulli RAMA Experiments for Tiny ImageNet
 # ==============================================================================
 PYTHON_SCRIPT_BERNOULLI="Tiny_Imagenet/SwinT_multi_vector_rama_bernoulli.py"
-SWINT_RAMA_BERNOULLI_ARGS="--use-rama --use-normalization --p-value 0.5 --lambda-value 1.0 --bernoulli-values 0_1 --activation relu --sqrt-dim False"
+SWINT_RAMA_BERNOULLI_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=0_1 --activation silu --sqrt-dim False"
 
 echo "-------------------------------------------------"
 echo "Starting Swin-T (Bernoulli RAMA) Experiments for Tiny ImageNet"
@@ -64,7 +64,7 @@ echo "-------------------------------------------------"
 # Swin-T Gaussian RAMA Experiments for Tiny ImageNet
 # ==============================================================================
 PYTHON_SCRIPT_GAUSSIAN="Tiny_Imagenet/SwinT_multi_vector_rama_gaussian.py"
-SWINT_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 1.0 --activation relu --sqrt-dim False --sigma-p-value 1.0"
+SWINT_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 0.2 --activation relu --sqrt-dim False --sigma-p-value 1.0"
 
 echo "\n\n-------------------------------------------------"
 echo "Starting Swin-T (Gaussian RAMA) Experiments for Tiny ImageNet"

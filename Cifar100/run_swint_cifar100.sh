@@ -6,10 +6,10 @@ EVAL_PGD=true
 
 # --- Base command arguments (common to all SwinTransformer runs) ---
 PYTHON_SCRIPT="Cifar100/SwinT_multi_vector_rama_bernoulli.py"
-BASE_ARGS="--epochs 50 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_cifar100/SwinT"
+BASE_ARGS="--epochs 100 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_cifar100/SwinT"
 
 # --- RAMA specific arguments for SwinTransformer ---
-SWINT_RAMA_ARGS="--use-rama --use-normalization --p-value 0.5 --lambda-value 1.0 --bernoulli-values=\"0_1\" --activation relu"
+SWINT_RAMA_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=0_1 --activation relu"
 
 # --- Constructing Evaluation Flags ---
 ADVERSARIAL_EVAL_FLAGS=""

@@ -14,7 +14,7 @@ BASE_ARGS="--epochs 100 --lr 0.1 --lr-scheduler cosine"
 # --- RAMA specific arguments for ResNet-18 ---
 # Adjust these as needed for your desired ResNet-18 + RAMA configuration.
 # These are example values, check Resnet_multi_vector_rama_bernoulli.py for defaults and options.
-RESNET_RAMA_ARGS="--use-rama --use-normalization --p-value 0.7 --lambda-value 0.3 --bernoulli-values=\"-1_1\" --activation silu --rama-positions layer1,layer2,layer3,final"
+RESNET_RAMA_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=-1_1 --activation silu --rama-positions final"
 
 # --- Attack parameters for AT and Evaluation (defaults from the Python script will be used if not specified here) ---
 # ADV_EPSILON="8/255"
@@ -73,4 +73,4 @@ echo "Finished: 4. ResNet-18 + AT (PGD) + RAMA"
 echo "-------------------------------------------------"
 
 echo "
-All ResNet-18 experiments finished." 
+All ResNet-18 experiments finished."

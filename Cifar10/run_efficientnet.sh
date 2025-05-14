@@ -8,13 +8,13 @@ EVAL_PGD=true
 # --- Base command arguments (common to all EfficientNet-B2 runs) ---
 PYTHON_SCRIPT="Cifar10/EfficientNet_multi_vector_rama_bernoulli.py" # Corrected spelling
 # Defaults from EffficientNet script: epochs 20, lr 0.01. Optimizer is SGD.
-BASE_ARGS="--epochs 100 --lr 0.01" 
+BASE_ARGS="--epochs 100 --lr 0.01"
 
 # --- RAMA specific arguments for EfficientNet-B2 ---
 # Adjust these as needed for your desired EfficientNet-B2 + RAMA configuration.
 # Check EfficientNet_multi_vector_rama_bernoulli.py for defaults and options.
 # Assuming Bernoulli RAMA as per current script capabilities.
-EFFICIENTNET_RAMA_ARGS="--use-rama --rama-type bernoulli --use-normalization --p-value 0.5 --lambda-value 1.0 --bernoulli-values=\"-1_1\" --activation silu"
+EFFICIENTNET_RAMA_ARGS="--use-rama --rama-type bernoulli --use-normalization --p-value 0.7 --bernoulli-values=-1_1 --activation leaky_relu"
 # Note: EfficientNet script does not seem to have explicit --rama-positions argument like ResNet/SwinT.
 # RAMA application in EfficientNet might be hardcoded or follow a different logic based on its structure.
 

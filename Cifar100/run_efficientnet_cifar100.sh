@@ -6,10 +6,10 @@ EVAL_PGD=true
 
 # --- Base command arguments (common to all EfficientNet-B2 runs) ---
 PYTHON_SCRIPT="Cifar100/EffficientNet_multi_vector_rama_bernoulli.py"
-BASE_ARGS="--epochs 50 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_cifar100/EfficientNetB2"
+BASE_ARGS="--epochs 100 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_cifar100/EfficientNetB2"
 
 # --- RAMA specific arguments for EfficientNet-B2 ---
-EFFICIENTNET_RAMA_ARGS="--use-rama --use-normalization --p-value 0.5 --lambda-value 1.0 --bernoulli-values=\"0_1\" --activation relu"
+EFFICIENTNET_RAMA_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=0_1 --activation relu"
 
 # --- Constructing Evaluation Flags ---
 ADVERSARIAL_EVAL_FLAGS=""

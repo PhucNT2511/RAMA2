@@ -6,10 +6,10 @@ EVAL_PGD=true
 
 # --- Base command arguments (common to all ResNet-18 runs) ---
 PYTHON_SCRIPT="Cifar100/Resnet_multi_vector_rama_bernoulli.py"
-BASE_ARGS="--epochs 50 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_cifar100/ResNet18"
+BASE_ARGS="--epochs 100 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_cifar100/ResNet18"
 
 # --- RAMA specific arguments for ResNet-18 ---
-RESNET_RAMA_ARGS="--use-rama --use-normalization --p-value 0.5 --lambda-value 1.0 --bernoulli-values=\"0_1\" --activation relu"
+RESNET_RAMA_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=0_1 --activation relu"
 
 # --- Constructing Evaluation Flags ---
 ADVERSARIAL_EVAL_FLAGS=""

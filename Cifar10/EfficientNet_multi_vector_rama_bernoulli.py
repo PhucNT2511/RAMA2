@@ -45,7 +45,7 @@ def get_experiment_name(args):
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training with EfficientNet-B2 and RAMA Layers')
-    
+
     # Training parameters
     parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
     parser.add_argument('--epochs', default=20, type=int, help='number of epochs')

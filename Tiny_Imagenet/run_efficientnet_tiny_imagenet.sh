@@ -6,7 +6,7 @@ EVAL_PGD=true
 AT_MODE_PGD="--at-attack pgd --at-epsilon 0.03 --at-alpha 0.01 --at-iter 7" # AT PGD specific params
 
 # --- Base command arguments (common to all EfficientNet-B2 runs on Tiny ImageNet) ---
-BASE_ARGS="--epochs 50 --lr 0.01 --batch-size 64 --seed 42 --checkpoint-dir ./checkpoints_tiny_imagenet/EfficientNetB2" # Adjusted batch-size for potential memory constraints
+BASE_ARGS="--epochs 100 --lr 0.01 --batch-size 64 --seed 42 --checkpoint-dir ./checkpoints_tiny_imagenet/EfficientNetB2" # Adjusted batch-size for potential memory constraints
 DATASET_ARGS="--data-dir ./data_tiny_imagenet"
 
 # --- Constructing Evaluation Flags ---
@@ -25,7 +25,7 @@ ADVERSARIAL_TRAINING_FLAGS_PGD="--adversarial-training $AT_MODE_PGD"
 # EfficientNet-B2 Bernoulli RAMA Experiments for Tiny ImageNet
 # ==============================================================================
 PYTHON_SCRIPT_BERNOULLI="Tiny_Imagenet/EffficientNet_multi_vector_rama_bernoulli.py"
-EFFICIENTNET_RAMA_BERNOULLI_ARGS="--use-rama --use-normalization --p-value 0.5 --lambda-value 1.0 --bernoulli-values 0_1 --activation relu --sqrt-dim False"
+EFFICIENTNET_RAMA_BERNOULLI_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=0_1 --activation relu --sqrt-dim False"
 
 echo "-------------------------------------------------"
 echo "Starting EfficientNet-B2 (Bernoulli RAMA) Experiments for Tiny ImageNet"

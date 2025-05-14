@@ -13,7 +13,7 @@ BASE_ARGS="--epochs 100" # You might want to adjust epochs or other base params 
 # --- RAMA specific arguments for Swin-T ---
 # Using the RAMA args from your previous script for Example 2
 # Adjust these as needed for your desired Swin-T + RAMA configuration
-SWIN_T_RAMA_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=\"-1_1\" --activation silu --rama-positions final"
+SWIN_T_RAMA_ARGS="--use-rama --use-normalization --p-value 0.7 --bernoulli-values=-1_1 --activation silu --rama-positions final"
 
 # --- Attack parameters for AT and Evaluation (defaults from the Python script will be used if not specified here) ---
 # ADV_EPSILON="8/255"

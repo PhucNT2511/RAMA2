@@ -6,7 +6,7 @@ EVAL_PGD=true
 AT_MODE_PGD="--at-attack pgd --at-epsilon 0.03 --at-alpha 0.01 --at-iter 7" # AT PGD specific params
 
 # --- Base command arguments (common to all ResNet-18 runs on Tiny ImageNet) ---
-BASE_ARGS="--epochs 50 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_tiny_imagenet/ResNet18"
+BASE_ARGS="--epochs 100 --lr 0.01 --batch-size 128 --seed 42 --checkpoint-dir ./checkpoints_tiny_imagenet/ResNet18"
 DATASET_ARGS="--data-dir ./data_tiny_imagenet" # Specify data directory for Tiny ImageNet
 
 # --- Constructing Evaluation Flags ---
@@ -25,7 +25,7 @@ ADVERSARIAL_TRAINING_FLAGS_PGD="--adversarial-training $AT_MODE_PGD"
 # ResNet-18 Bernoulli RAMA Experiments for Tiny ImageNet
 # ==============================================================================
 PYTHON_SCRIPT_BERNOULLI="Tiny_Imagenet/Resnet_multi_vector_rama_bernoulli.py"
-RESNET_RAMA_BERNOULLI_ARGS="--use-rama --use-normalization --p-value 0.5 --lambda-value 1.0 --bernoulli-values 0_1 --activation relu --sqrt-dim False" # Adjusted for Bernoulli
+RESNET_RAMA_BERNOULLI_ARGS="--use-rama --use-normalization --p-value 0.8 --bernoulli-values=0_1 --activation relu --sqrt-dim False"
 
 echo "-------------------------------------------------"
 echo "Starting ResNet-18 (Bernoulli RAMA) Experiments for Tiny ImageNet"
@@ -64,7 +64,7 @@ echo "-------------------------------------------------"
 # ResNet-18 Gaussian RAMA Experiments for Tiny ImageNet
 # ==============================================================================
 PYTHON_SCRIPT_GAUSSIAN="Tiny_Imagenet/Resnet_multi_vector_rama_gaussian.py"
-RESNET_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 1.0 --activation relu --sqrt-dim False" # Adjusted for Gaussian (sigma_p_value is passed if needed by script, or use lambda_value)
+RESNET_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 0.2 --activation relu --sqrt-dim False"
 
 echo "\n\n-------------------------------------------------"
 echo "Starting ResNet-18 (Gaussian RAMA) Experiments for Tiny ImageNet"
