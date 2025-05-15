@@ -23,6 +23,10 @@ import math
 script_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(script_dir)
 sys.path.append(parent_dir)
+
+print("Parent directory added to sys.path:", parent_dir)
+print("Current script directory:", script_dir)
+
 from Cifar10.common.attacks import fgsm_attack, pgd_attack
 
 logging.basicConfig(
@@ -123,6 +127,14 @@ class EfficientNet(nn.Module):
                 }
             
         self.backbone = efficientnet_b2(weights=None)
+        self.backbone.features[0][0] = nn.Conv2d(
+            in_channels=3,
+            out_channels=32,
+            kernel_size=3,
+            stride=1,     
+            padding=1,    
+            bias=False
+        )
         self.feature_dim = self.backbone.classifier[1].in_features
 
         self.features_1 = nn.Sequential(*list(self.backbone.children())[:-1]) 
@@ -243,6 +255,15 @@ class DataManager:
         )
         return trainloader, testloader
 
+class AttackModelWrapper(nn.Module):
+    def __init__(self, base_model, lambda_value):
+        super().__init__()
+        self.base_model = base_model
+        self.lambda_value = lambda_value
+
+    def forward(self, x):
+        return self.base_model(x, lambda_value=self.lambda_value)
+
 
 class Trainer:
     """
@@ -359,8 +380,9 @@ class Trainer:
                 self.model.eval() # Set model to eval mode for attack generation
                 current_lambda_for_at = lambda_value # This is self.best_lambda from the train loop
                 inputs_for_attack = inputs.clone().detach()
-
-                attack_model_wrapper_at = lambda imgs_for_attack: self.model.forward(imgs_for_attack, lambda_value=current_lambda_for_at)
+                
+                attack_model_wrapper_at = AttackModelWrapper(self.model, current_lambda_for_at).to(self.device)
+                #attack_model_wrapper_at = lambda imgs_for_attack: self.model.forward(imgs_for_attack, lambda_value=current_lambda_for_at)
 
                 if self.args.at_attack == 'pgd':
                     adv_inputs = pgd_attack(attack_model_wrapper_at, inputs_for_attack, targets,
@@ -472,26 +494,28 @@ class Trainer:
                 correct += predicted.eq(targets).sum().item()
 
                 # Define a model wrapper for attack functions that handles lambda_value
-                attack_model_wrapper = lambda imgs_for_attack: self.model.forward(imgs_for_attack, lambda_value=current_lambda_for_eval)
+                attack_model_wrapper = AttackModelWrapper(self.model, current_lambda_for_eval).to(self.device)
+                
 
                 if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == total_epochs - 1):
-                    # FGSM Attack Evaluation
-                    if self.args and self.args.eval_fgsm:
-                        adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
-                        outputs_fgsm = self.model.forward(adv_images_fgsm, lambda_value=current_lambda_for_eval)
-                        _, predicted_fgsm = outputs_fgsm.max(1)
-                        total_fgsm += targets.size(0)
-                        correct_fgsm += predicted_fgsm.eq(targets).sum().item()
+                    with torch.enable_grad():
+                        # FGSM Attack Evaluation
+                        if self.args and self.args.eval_fgsm:
+                            adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
+                            outputs_fgsm = self.model.forward(adv_images_fgsm, lambda_value=current_lambda_for_eval)
+                            _, predicted_fgsm = outputs_fgsm.max(1)
+                            total_fgsm += targets.size(0)
+                            correct_fgsm += predicted_fgsm.eq(targets).sum().item()
 
-                    # PGD Attack Evaluation
-                    if self.args and self.args.eval_pgd:
-                        adv_images_pgd = pgd_attack(attack_model_wrapper, inputs.clone(), targets, 
-                                                    self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
-                                                    self.device, clamp_min=-10.0, clamp_max=10.0) # Wide clamps for normalized data
-                        outputs_pgd = self.model.forward(adv_images_pgd, lambda_value=current_lambda_for_eval)
-                        _, predicted_pgd = outputs_pgd.max(1)
-                        total_pgd += targets.size(0)
-                        correct_pgd += predicted_pgd.eq(targets).sum().item()
+                        # PGD Attack Evaluation
+                        if self.args and self.args.eval_pgd:
+                            adv_images_pgd = pgd_attack(attack_model_wrapper, inputs.clone(), targets, 
+                                                        self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
+                                                        self.device, clamp_min=-10.0, clamp_max=10.0) # Wide clamps for normalized data
+                            outputs_pgd = self.model.forward(adv_images_pgd, lambda_value=current_lambda_for_eval)
+                            _, predicted_pgd = outputs_pgd.max(1)
+                            total_pgd += targets.size(0)
+                            correct_pgd += predicted_pgd.eq(targets).sum().item()
 
                 eval_desc = f"Clean Acc: {100.*correct/total:.2f}%"
                 if self.args and self.args.eval_fgsm:
