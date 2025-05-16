@@ -29,15 +29,20 @@ print("Current script directory:", script_dir)
 
 from Cifar10.common.attacks import fgsm_attack, pgd_attack
 
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG, 
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("training.log"),
+        logging.FileHandler("logs/training.log"),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
+
+
 #MAX_lambda_value = 10
 #MIN_lambda_value = 1e-3
 NEPTUNE_PRJ_NAME = os.getenv("NEPTUNE_PROJECT")
@@ -361,7 +366,7 @@ class Trainer:
             self.bayesian_optimizer.load_state(path)
             logger.info(f"Loaded max value: {self.bayesian_optimizer.max}")
 
-    def train_one_epoch(self, lambda_value=None):
+    def train_one_epoch(self, lambda_value=None, epoch=0):
         """
         Train the model for one epoch.
         
@@ -695,13 +700,13 @@ class Trainer:
             logger.info(f"\nEpoch: {epoch+1}/{epochs}")
 
             # Train with best p
-            train_loss, train_acc = self.train_one_epoch(lambda_value=self.best_lambda)
+            train_loss, train_acc = self.train_one_epoch(lambda_value=self.best_lambda, epoch=epoch)
             
             # Basic evaluation
             test_loss, test_acc = self.evaluate(lambda_value=self.best_lambda)
             
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            # if epoch % 15 == 0 or epoch == epochs - 1:
+            #if epoch % 5 == 0 or epoch == epochs - 1:
             metrics = self.evaluate_with_metrics(lambda_value=self.best_lambda, epoch=epoch, test_acc=test_acc, total_epochs=epochs)
             if 'feature_metrics' in metrics and metrics['feature_metrics']:
                 feature_metrics = metrics['feature_metrics']
