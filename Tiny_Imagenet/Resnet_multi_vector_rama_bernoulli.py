@@ -628,7 +628,7 @@ class Trainer:
                     if self.args and self.args.eval_pgd:
                         # Using wide clamps for normalized data as in Cifar100 examples
                         adv_images_pgd = pgd_attack(wrapped_model_for_eval, inputs.clone(), targets, 
-                                                    self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
+                                                    self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter,
                                                     self.device, clamp_min=-10.0, clamp_max=10.0) 
                         outputs_pgd = self.model.forward(adv_images_pgd, p_value=p_value)
                         _, predicted_pgd = outputs_pgd.max(1)
@@ -671,8 +671,7 @@ class Trainer:
             'accuracy': accuracy,
             'feature_metrics': feature_metrics
         }
-
-        if self.args and self.args.eval_fgsm and total_fgsm > 0:
+        if self.args and self.args.eval_fgsm:
             fgsm_accuracy = 100. * correct_fgsm / total_fgsm
             eval_results['fgsm_accuracy'] = fgsm_accuracy
             logger.info(f"FGSM Robust Accuracy (eps={self.args.epsilon:.3f}): {fgsm_accuracy:.2f}%")
@@ -681,7 +680,7 @@ class Trainer:
             if self.writer and epoch is not None:
                 self.writer.add_scalar(f"Test/FGSM_Accuracy_eps{self.args.epsilon}", fgsm_accuracy, epoch)
 
-        if self.args and self.args.eval_pgd and total_pgd > 0:
+        if self.args and self.args.eval_pgd:
             pgd_accuracy = 100. * correct_pgd / total_pgd
             eval_results['pgd_accuracy'] = pgd_accuracy
             logger.info(f"PGD Robust Accuracy (eps={self.args.epsilon:.3f}, alpha={self.args.pgd_alpha:.3f}, iter={self.args.pgd_iter}): {pgd_accuracy:.2f}%")
@@ -689,7 +688,6 @@ class Trainer:
                 self.neptune_run[f"Test/PGD_Accuracy_eps{self.args.epsilon}_alpha{self.args.pgd_alpha}_iter{self.args.pgd_iter}"].append(pgd_accuracy)
             if self.writer and epoch is not None:
                 self.writer.add_scalar(f"Test/PGD_Accuracy_eps{self.args.epsilon}_alpha{self.args.pgd_alpha}_iter{self.args.pgd_iter}", pgd_accuracy, epoch)
-                
         return eval_results
 
     def _calculate_feature_metrics(self, features_before, features_after, labels):
