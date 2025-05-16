@@ -672,7 +672,8 @@ class Trainer:
             'feature_metrics': feature_metrics
         }
         if self.args and self.args.eval_fgsm:
-            fgsm_accuracy = 100. * correct_fgsm / total_fgsm
+            # Add a small epsilon to prevent division by zero
+            fgsm_accuracy = 100. * correct_fgsm / (total_fgsm + 1e-8) 
             eval_results['fgsm_accuracy'] = fgsm_accuracy
             logger.info(f"FGSM Robust Accuracy (eps={self.args.epsilon:.3f}): {fgsm_accuracy:.2f}%")
             if self.neptune_run:
@@ -681,13 +682,15 @@ class Trainer:
                 self.writer.add_scalar(f"Test/FGSM_Accuracy_eps{self.args.epsilon}", fgsm_accuracy, epoch)
 
         if self.args and self.args.eval_pgd:
-            pgd_accuracy = 100. * correct_pgd / total_pgd
+            # Add a small epsilon to prevent division by zero
+            pgd_accuracy = 100. * correct_pgd / (total_pgd + 1e-8)
             eval_results['pgd_accuracy'] = pgd_accuracy
             logger.info(f"PGD Robust Accuracy (eps={self.args.epsilon:.3f}, alpha={self.args.pgd_alpha:.3f}, iter={self.args.pgd_iter}): {pgd_accuracy:.2f}%")
             if self.neptune_run:
                 self.neptune_run[f"Test/PGD_Accuracy_eps{self.args.epsilon}_alpha{self.args.pgd_alpha}_iter{self.args.pgd_iter}"].append(pgd_accuracy)
             if self.writer and epoch is not None:
                 self.writer.add_scalar(f"Test/PGD_Accuracy_eps{self.args.epsilon}_alpha{self.args.pgd_alpha}_iter{self.args.pgd_iter}", pgd_accuracy, epoch)
+                
         return eval_results
 
     def _calculate_feature_metrics(self, features_before, features_after, labels):
