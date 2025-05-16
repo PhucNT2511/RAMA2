@@ -60,43 +60,43 @@ CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_BERNOULLI $BASE_ARGS $DATASET_ARGS 
 echo "Finished: 4. ResNet-18 + Bernoulli RAMA + AT (PGD)"
 echo "-------------------------------------------------"
 
-# ==============================================================================
-# ResNet-18 Gaussian RAMA Experiments for Tiny ImageNet
-# ==============================================================================
-PYTHON_SCRIPT_GAUSSIAN="Tiny_Imagenet/Resnet_multi_vector_rama_gaussian.py"
-RESNET_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 0.2 --activation relu --sqrt-dim False"
+# # ==============================================================================
+# # ResNet-18 Gaussian RAMA Experiments for Tiny ImageNet
+# # ==============================================================================
+# PYTHON_SCRIPT_GAUSSIAN="Tiny_Imagenet/Resnet_multi_vector_rama_gaussian.py"
+# RESNET_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 0.2 --activation relu --sqrt-dim False"
 
-echo "\n\n-------------------------------------------------"
-echo "Starting ResNet-18 (Gaussian RAMA) Experiments for Tiny ImageNet"
-echo "Evaluations enabled: FGSM=$EVAL_FGSM, PGD=$EVAL_PGD"
-echo "-------------------------------------------------"
+# echo "\n\n-------------------------------------------------"
+# echo "Starting ResNet-18 (Gaussian RAMA) Experiments for Tiny ImageNet"
+# echo "Evaluations enabled: FGSM=$EVAL_FGSM, PGD=$EVAL_PGD"
+# echo "-------------------------------------------------"
 
-# 5. ResNet-18 Baseline (Gaussian script, no RAMA) - Note: This is effectively the same as #1 but uses the Gaussian script
-echo "\nRunning: 5. ResNet-18 Baseline (Gaussian Script)"
-echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS"
-CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS
-echo "Finished: 5. ResNet-18 Baseline (Gaussian Script)"
-echo "-------------------------------------------------"
+# # 5. ResNet-18 Baseline (Gaussian script, no RAMA) - Note: This is effectively the same as #1 but uses the Gaussian script
+# echo "\nRunning: 5. ResNet-18 Baseline (Gaussian Script)"
+# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS"
+# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS
+# echo "Finished: 5. ResNet-18 Baseline (Gaussian Script)"
+# echo "-------------------------------------------------"
 
-# 6. ResNet-18 + AT (PGD) (Gaussian script, no RAMA)
-echo "\nRunning: 6. ResNet-18 + AT (PGD) (Gaussian Script)"
-echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS"
-CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS
-echo "Finished: 6. ResNet-18 + AT (PGD) (Gaussian Script)"
-echo "-------------------------------------------------"
+# # 6. ResNet-18 + AT (PGD) (Gaussian script, no RAMA)
+# echo "\nRunning: 6. ResNet-18 + AT (PGD) (Gaussian Script)"
+# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS"
+# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS
+# echo "Finished: 6. ResNet-18 + AT (PGD) (Gaussian Script)"
+# echo "-------------------------------------------------"
 
-# 7. ResNet-18 + Gaussian RAMA
-echo "\nRunning: 7. ResNet-18 + Gaussian RAMA"
-echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS"
-CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS
-echo "Finished: 7. ResNet-18 + Gaussian RAMA"
-echo "-------------------------------------------------"
+# # 7. ResNet-18 + Gaussian RAMA
+# echo "\nRunning: 7. ResNet-18 + Gaussian RAMA"
+# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS"
+# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS
+# echo "Finished: 7. ResNet-18 + Gaussian RAMA"
+# echo "-------------------------------------------------"
 
-# 8. ResNet-18 + Gaussian RAMA + AT (PGD)
-echo "\nRunning: 8. ResNet-18 + Gaussian RAMA + AT (PGD)"
-echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS"
-CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS
-echo "Finished: 8. ResNet-18 + Gaussian RAMA + AT (PGD)"
-echo "-------------------------------------------------"
+# # 8. ResNet-18 + Gaussian RAMA + AT (PGD)
+# echo "\nRunning: 8. ResNet-18 + Gaussian RAMA + AT (PGD)"
+# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS"
+# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS
+# echo "Finished: 8. ResNet-18 + Gaussian RAMA + AT (PGD)"
+# echo "-------------------------------------------------"
 
-echo "\nAll ResNet-18 Tiny ImageNet experiments finished." 
+echo "\nAll ResNet-18 Tiny ImageNet experiments finished."

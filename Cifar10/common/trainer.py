@@ -426,7 +426,7 @@ class Trainer:
             # Adversarial Evaluation if enabled
             fgsm_acc, pgd_acc = -1.0, -1.0 # Default if not evaluated
             fgsm_loss, pgd_loss = -1.0, -1.0
-            if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == epochs - 1):
+            if epoch % 15 == 0 or epoch == epochs - 1:
                 if self.eval_fgsm:
                     fgsm_loss, fgsm_acc = self.evaluate_fgsm(p_value=self.best_p)
 
@@ -434,7 +434,7 @@ class Trainer:
                     pgd_loss, pgd_acc = self.evaluate_pgd(p_value=self.best_p)
 
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            if epoch % 5 == 0 or epoch == epochs - 1:
+            if epoch % 15 == 0 or epoch == epochs - 1:
                 metrics = self.evaluate_with_metrics(p_value=self.best_p)
                 if 'feature_metrics' in metrics and metrics['feature_metrics']:
                     feature_metrics = metrics['feature_metrics']
