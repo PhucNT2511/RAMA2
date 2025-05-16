@@ -702,7 +702,7 @@ class Trainer:
             test_loss, test_acc = self.evaluate(p_value=self.best_p)
             
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            # if epoch % 5 == 0 or epoch == epochs - 1:
+            # if epoch % 15 == 0 or epoch == epochs - 1:
             metrics = self.evaluate_with_metrics(p_value=self.best_p)
             if 'feature_metrics' in metrics and metrics['feature_metrics']:
                 feature_metrics = metrics['feature_metrics']

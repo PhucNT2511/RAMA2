@@ -40,6 +40,23 @@ MIN_p_value = 1e-3
 NEPTUNE_PRJ_NAME = os.getenv("NEPTUNE_PROJECT")
 NEPTUNE_API_TOKEN = os.getenv("NEPTUNE_API_TOKEN")
 
+# Helper class to wrap model for attack functions
+class ModelAttackWrapper:
+    def __init__(self, model_actual: nn.Module, p_value_for_attack: Optional[float]):
+        self.model_actual = model_actual
+        self.p_value_for_attack = p_value_for_attack
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        # This will be called by the attack function like: model(images)
+        # It should execute the forward pass of the actual model with the specific p_value
+        return self.model_actual.forward(x, p_value=self.p_value_for_attack)
+
+    def __getattr__(self, name: str):
+        # Delegate other attributes (e.g., zero_grad, parameters, eval, train)
+        # to the actual model instance.
+        return getattr(self.model_actual, name)
+
+
 ##### RAMA with Bernoulli for U matrix instead of norm distribution
 class BernoulliRAMALayer(nn.Module):
     """
@@ -474,17 +491,17 @@ class Trainer:
             current_batch_inputs = orig_inputs
 
             if self.args and self.args.adversarial_training:
+                current_p_for_at = p_value # This is self.best_p from the train loop
                 self.model.eval() # Switch to eval mode for attack generation
                 
-                # Use the provided p_value (which is self.best_p or args.p_value) for attack generation
-                attack_model_wrapper_at = lambda imgs_for_attack: self.model.forward(imgs_for_attack, p_value=p_value)
-
+                # Wrapper for attack function, ensuring RAMA p_value is used if RAMA is active
+                wrapped_model_for_at = ModelAttackWrapper(self.model, current_p_for_at)
                 if self.args.at_attack == 'pgd':
-                    adv_inputs = pgd_attack(attack_model_wrapper_at, orig_inputs.clone().detach(), targets,
+                    adv_inputs = pgd_attack(wrapped_model_for_at, orig_inputs.clone().detach(), targets,
                                             self.args.at_epsilon, self.args.at_alpha, self.args.at_iter,
                                             self.device, clamp_min=-10.0, clamp_max=10.0) 
                 elif self.args.at_attack == 'fgsm':
-                    adv_inputs = fgsm_attack(attack_model_wrapper_at, orig_inputs.clone().detach(), targets,
+                    adv_inputs = fgsm_attack(wrapped_model_for_at, orig_inputs.clone().detach(), targets,
                                              self.args.at_epsilon, self.device)
                 else: # Should not happen if argparse choices are set
                     adv_inputs = orig_inputs 
@@ -588,16 +605,19 @@ class Trainer:
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
                 
+                # Use the forward pass that returns features
+                current_p_value_for_eval = p_value if self.use_rama else None
+
                 # Define a model wrapper for attack functions that handles p_value
                 # The attack functions expect model(images) to return logits
-                attack_model_wrapper = lambda imgs_for_attack: self.model.forward(imgs_for_attack, p_value=p_value)
+                wrapped_model_for_eval = ModelAttackWrapper(self.model, current_p_value_for_eval)
 
-                if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == total_epochs - 1):
+                if epoch % 15 == 0 or epoch == total_epochs - 1:
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
                         # For TinyImageNet (normalized), default FGSM clamp to [0,1] might be an issue.
                         # The provided fgsm_attack clamps to [0,1].
-                        adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
+                        adv_images_fgsm = fgsm_attack(wrapped_model_for_eval, inputs.clone(), targets, self.args.epsilon, self.device)
                         outputs_fgsm = self.model.forward(adv_images_fgsm, p_value=p_value)
                         _, predicted_fgsm = outputs_fgsm.max(1)
                         total_fgsm += targets.size(0)
@@ -606,7 +626,7 @@ class Trainer:
                     # PGD Attack Evaluation
                     if self.args and self.args.eval_pgd:
                         # Using wide clamps for normalized data as in Cifar100 examples
-                        adv_images_pgd = pgd_attack(attack_model_wrapper, inputs.clone(), targets, 
+                        adv_images_pgd = pgd_attack(wrapped_model_for_eval, inputs.clone(), targets, 
                                                     self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
                                                     self.device, clamp_min=-10.0, clamp_max=10.0) 
                         outputs_pgd = self.model.forward(adv_images_pgd, p_value=p_value)
@@ -619,7 +639,6 @@ class Trainer:
                     eval_desc += f" | FGSM Acc: {100.*correct_fgsm/total_fgsm if total_fgsm > 0 else 0:.2f}%"
                 if self.args and self.args.eval_pgd:
                     eval_desc += f" | PGD Acc: {100.*correct_pgd/total_pgd if total_pgd > 0 else 0:.2f}%"
-                pbar_eval.set_postfix_str(eval_desc)
 
         # Calculate standard metrics
         accuracy = 100. * correct / total
@@ -798,7 +817,7 @@ class Trainer:
             test_loss, test_acc = self.evaluate(p_value=self.best_p)
             
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            # if epoch % 5 == 0 or epoch == epochs - 1:
+            # if epoch % 15 == 0 or epoch == epochs - 1:
             metrics = self.evaluate_with_metrics(p_value=self.best_p, epoch=epoch, test_acc=test_acc, total_epochs=epochs)
             if 'feature_metrics' in metrics and metrics['feature_metrics']:
                 feature_metrics = metrics['feature_metrics']
@@ -992,7 +1011,11 @@ def parse_args():
     parser.add_argument('--bayes-xi', default=0.01, type=float, help='exploration-exploitation parameter for ei/poi')
     parser.add_argument('--bayes-kappa', default=2.5, type=float, help='exploration-exploitation parameter for ucb')
     parser.add_argument('--optimize-every', default=5, type=int, help='optimize P every N epochs')
-    parser.add_argument('--at-attack', default='pgd', choices=['pgd', 'fgsm'], help='attack type for adversarial training')
+
+    # Adversarial Training (AT) parameters
+    parser.add_argument('--adversarial-training', '--at', action='store_true', help='Enable adversarial training')
+    parser.add_argument('--at-attack', default='pgd', choices=['fgsm', 'pgd'], help='Attack type for adversarial training')
+    parser.add_argument('--at-epsilon', default=0.03, type=float, help='Epsilon for adversarial training attack')
     parser.add_argument('--at-alpha', default=0.01, type=float, help='Alpha for PGD adversarial training attack')
     parser.add_argument('--at-iter', default=7, type=int, help='Iterations for PGD adversarial training attack')
     

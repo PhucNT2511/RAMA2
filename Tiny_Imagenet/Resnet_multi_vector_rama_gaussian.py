@@ -561,7 +561,7 @@ class Trainer:
                 # Define a model wrapper for attack functions that handles lambda_value
                 attack_model_wrapper = lambda imgs_for_attack: self.model.forward(imgs_for_attack, lambda_value=lambda_value)
 
-                if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == total_epochs - 1):
+                if epoch % 15 == 0 or epoch == total_epochs - 1:
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
                         adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
