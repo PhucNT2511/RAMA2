@@ -138,6 +138,8 @@ class BernoulliRAMALayer(nn.Module):
             out = torch.tanh(out)
         elif self.activation == "sigmoid":
             out = torch.sigmoid(out)
+        elif self.activation == "silu":
+            out = out * torch.sigmoid(out)
         return out
 
 
@@ -611,7 +613,6 @@ class Trainer:
                 # Define a model wrapper for attack functions that handles p_value
                 # The attack functions expect model(images) to return logits
                 wrapped_model_for_eval = ModelAttackWrapper(self.model, current_p_value_for_eval)
-
                 if epoch % 15 == 0 or epoch == total_epochs - 1:
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
@@ -815,9 +816,8 @@ class Trainer:
             
             # Basic evaluation
             test_loss, test_acc = self.evaluate(p_value=self.best_p)
-            
+
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            # if epoch % 15 == 0 or epoch == epochs - 1:
             metrics = self.evaluate_with_metrics(p_value=self.best_p, epoch=epoch, test_acc=test_acc, total_epochs=epochs)
             if 'feature_metrics' in metrics and metrics['feature_metrics']:
                 feature_metrics = metrics['feature_metrics']
@@ -999,7 +999,7 @@ def parse_args():
     parser.add_argument('--bernoulli-values', default='0_1', choices=['0_1', '-1_1'],
                       type=str, help='values for Bernoulli distribution (0/1 or -1/1)')
     parser.add_argument('--use-normalization', action='store_true', help='use layer normalization in RAMA layers')
-    parser.add_argument('--activation', default='relu', choices=['relu', 'leaky_relu', 'tanh', 'sigmoid'],
+    parser.add_argument('--activation', default='relu', choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'silu'],
                         help='activation function for RAMA layers')
     
     # Bayesian optimization parameters - adjusted for probability range

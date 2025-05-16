@@ -119,6 +119,8 @@ class BernoulliRAMALayer(nn.Module):
             out = torch.tanh(out)
         elif self.activation == "sigmoid":
             out = torch.sigmoid(out)
+        elif self.activation == "silu":
+            out = out * torch.sigmoid(out)
         return out
 
 

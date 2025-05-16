@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-def fgsm_attack(model, images, labels, epsilon, device):
+def fgsm_attack(model, images, labels, epsilon, device, clamp_min=0, clamp_max=1):
     """
     Generates adversarial examples using the Fast Gradient Sign Method (FGSM).
 
@@ -12,29 +12,31 @@ def fgsm_attack(model, images, labels, epsilon, device):
         labels (torch.Tensor): True labels for the images.
         epsilon (float): Perturbation magnitude.
         device (torch.device): Device to perform computations on.
+        clamp_min (float): Minimum value for image clipping.
+        clamp_max (float): Maximum value for image clipping.
 
     Returns:
         torch.Tensor: Adversarial images.
     """
     images = images.clone().detach().to(device)
     labels = labels.clone().detach().to(device)
-    images.requires_grad = True
+    images.requires_grad_(True)
 
     model.eval() # Ensure model is in evaluation mode
-    outputs = model(images)
-    loss = nn.CrossEntropyLoss()(outputs, labels)
-    model.zero_grad()
-    loss.backward()
+    
+    with torch.enable_grad():  # Temporarily re-enable gradient calculation
+        outputs = model(images)
+        loss = nn.CrossEntropyLoss()(outputs, labels)
+        model.zero_grad() # It's good practice to zero gradients before backward pass
+        loss.backward()
 
     # Collect the gradient of the loss w.r.t. the input image
     data_grad = images.grad.data
 
     # Create the perturbed image by adjusting each pixel of the input image
     perturbed_image = images + epsilon * data_grad.sign()
-    # Clip perturbed image to maintain [0,1] range if images are normalized to [0,1]
-    # If images have other normalization (e.g. Imagenet mean/std), clipping might need adjustment
-    perturbed_image = torch.clamp(perturbed_image, 0, 1) 
-    
+    # Clip to the specified range (defaults to [0,1] for backward compatibility)
+    perturbed_image = torch.clamp(perturbed_image, min=clamp_min, max=clamp_max)
     return perturbed_image.detach()
 
 
@@ -67,12 +69,12 @@ def pgd_attack(model, images, labels, epsilon, alpha, num_iter, device, clamp_mi
     model.eval() # Ensure model is in evaluation mode
 
     for _ in range(num_iter):
-        adv_images.requires_grad = True
-        outputs = model(adv_images)
-
-        loss = nn.CrossEntropyLoss()(outputs, labels)
-        model.zero_grad()
-        loss.backward()
+        adv_images.requires_grad_(True)
+        with torch.enable_grad():  # Temporarily re-enable gradient calculation for each iteration
+            outputs = model(adv_images)
+            loss = nn.CrossEntropyLoss()(outputs, labels)
+            model.zero_grad() # Zero gradients before backward pass
+            loss.backward()
 
         # Collect the gradient
         grad = adv_images.grad.data
