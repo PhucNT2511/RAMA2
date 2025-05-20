@@ -328,16 +328,18 @@ def attack_pgd(model, X, y, epsilon, alpha, attack_iters, restarts):
         delta.data = clamp(delta, lower_limit - X, upper_limit - X)
         delta.requires_grad = True
         for _ in range(attack_iters):
-            output = model(X + delta)
-            if isinstance(output, tuple):
-                output = output[0]
+            with torch.enable_grad():  # Ensure gradients are enabled
+                output = model(X + delta)
+                if isinstance(output, tuple):
+                    output = output[0]
 
-            index = torch.where(output.max(1)[1] == y)
-            if len(index[0]) == 0:
-                break
-            loss = F.cross_entropy(output, y)
-            loss.backward()
-            grad = delta.grad.detach()
+                index = torch.where(output.max(1)[1] == y)
+                if len(index[0]) == 0:
+                    break
+                loss = F.cross_entropy(output, y)
+                loss.backward()
+                grad = delta.grad.detach()
+            
             d = delta[index[0], :, :, :]
             g = grad[index[0], :, :, :]
             d = clamp(d + alpha * torch.sign(g), -epsilon, epsilon)
@@ -433,16 +435,18 @@ def attack_fgsm(model, X, y, epsilon, alpha, restarts):
         delta.data = clamp(delta, lower_limit - X, upper_limit - X)
         delta.requires_grad = True
         for _ in range(attack_iters):
-            output = model(X + delta)
-            if isinstance(output, tuple):
-                output = output[0]
+            with torch.enable_grad():  # Ensure gradients are enabled
+                output = model(X + delta)
+                if isinstance(output, tuple):
+                    output = output[0]
 
-            index = torch.where(output.max(1)[1] == y)
-            if len(index[0]) == 0:
-                break
-            loss = F.cross_entropy(output, y)
-            loss.backward()
-            grad = delta.grad.detach()
+                index = torch.where(output.max(1)[1] == y)
+                if len(index[0]) == 0:
+                    break
+                loss = F.cross_entropy(output, y)
+                loss.backward()
+                grad = delta.grad.detach()
+            
             d = delta[index[0], :, :, :]
             g = grad[index[0], :, :, :]
             d = clamp(d + alpha * torch.sign(g), -epsilon, epsilon)

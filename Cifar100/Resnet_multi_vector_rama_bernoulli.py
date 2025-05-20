@@ -38,6 +38,23 @@ MIN_p_value = 1e-3
 NEPTUNE_PRJ_NAME = os.getenv("NEPTUNE_PROJECT")
 NEPTUNE_API_TOKEN = os.getenv("NEPTUNE_API_TOKEN")
 
+# Helper class to wrap model for attack functions
+class ModelAttackWrapper:
+    def __init__(self, model_actual: nn.Module, p_value_for_attack: Optional[float]):
+        self.model_actual = model_actual
+        self.p_value_for_attack = p_value_for_attack
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        # This will be called by the attack function like: model(images)
+        # It should execute the forward pass of the actual model with the specific p_value
+        return self.model_actual.forward(x, p_value=self.p_value_for_attack)
+
+    def __getattr__(self, name: str):
+        # Delegate other attributes (e.g., zero_grad, parameters, eval, train)
+        # to the actual model instance.
+        return getattr(self.model_actual, name)
+
+
 ##### RAMA with Bernoulli for U matrix instead of norm distribution
 class BernoulliRAMALayer(nn.Module):
     """
@@ -119,6 +136,8 @@ class BernoulliRAMALayer(nn.Module):
             out = torch.tanh(out)
         elif self.activation == "sigmoid":
             out = torch.sigmoid(out)
+        elif self.activation == "silu":
+            out = out * torch.sigmoid(out)
         return out
 
 
@@ -476,7 +495,6 @@ class Trainer:
         pbar = tqdm(self.trainloader, desc="Training")
         for batch_idx, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
-            
             if self.args and self.args.adversarial_training:
                 self.model.eval() # Set model to eval mode for attack generation, then back to train
                 # Generate adversarial examples
@@ -484,14 +502,13 @@ class Trainer:
                 inputs_for_attack = inputs.clone().detach()
 
                 # Wrapper for attack function, ensuring RAMA p_value is used if RAMA is active
-                attack_model_wrapper_at = lambda imgs_for_attack: self.model.forward(imgs_for_attack, p_value=current_p_for_at)
-
+                wrapped_model_for_at = ModelAttackWrapper(self.model, current_p_for_at)
                 if self.args.at_attack == 'pgd':
-                    adv_inputs = pgd_attack(attack_model_wrapper_at, inputs_for_attack, targets,
+                    adv_inputs = pgd_attack(wrapped_model_for_at, inputs_for_attack, targets,
                                             self.args.at_epsilon, self.args.at_alpha, self.args.at_iter,
                                             self.device, clamp_min=-10.0, clamp_max=10.0) 
                 elif self.args.at_attack == 'fgsm':
-                    adv_inputs = fgsm_attack(attack_model_wrapper_at, inputs_for_attack, targets,
+                    adv_inputs = fgsm_attack(wrapped_model_for_at, inputs_for_attack, targets,
                                              self.args.at_epsilon, self.device)
                 else: # Default to clean inputs if attack type is somehow wrong (should be caught by argparse choices)
                     adv_inputs = inputs
@@ -583,8 +600,12 @@ class Trainer:
                 
                 # Use the forward pass that returns features
                 current_p_value_for_eval = p_value if self.use_rama else None
-                outputs, before_features, after_features = self.model.forward_with_features(inputs, current_p_value_for_eval)
                 
+                # Define a model wrapper for attack functions that handles p_value
+                # The attack functions expect model(images) to return logits
+                wrapped_model_for_eval = ModelAttackWrapper(self.model, current_p_value_for_eval)
+                
+                outputs, before_features, after_features = self.model.forward_with_features(inputs, current_p_value_for_eval)
                 if self.use_rama and before_features is not None and after_features is not None: # Only collect if RAMA is used and features are returned
                         features_original.append(before_features.cpu())
                         features_after_rama.append(after_features.cpu())
@@ -596,14 +617,19 @@ class Trainer:
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
         
+<<<<<<< HEAD
+                if epoch % 15 == 0 or epoch == total_epochs - 1:
+                    logger.info(f"Evaluating Adversarial Attacks at epoch {epoch}")
+=======
                 # Define a model wrapper for attack functions that handles p_value
                 # The attack functions expect model(images) to return logits
                 attack_model_wrapper = lambda imgs_for_attack: self.model.forward(imgs_for_attack, p_value=current_p_value_for_eval)
 
-                if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == total_epochs - 1):
+                if epoch % 15 == 0 or epoch == total_epochs - 1:
+>>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
-                        adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
+                        adv_images_fgsm = fgsm_attack(wrapped_model_for_eval, inputs.clone(), targets, self.args.epsilon, self.device)
                         outputs_fgsm = self.model.forward(adv_images_fgsm, p_value=current_p_value_for_eval)
                         _, predicted_fgsm = outputs_fgsm.max(1)
                         total_fgsm += targets.size(0)
@@ -611,14 +637,14 @@ class Trainer:
 
                     # PGD Attack Evaluation
                     if self.args and self.args.eval_pgd:
-                        adv_images_pgd = pgd_attack(attack_model_wrapper, inputs.clone(), targets, 
+                        adv_images_pgd = pgd_attack(wrapped_model_for_eval, inputs.clone(), targets, 
                                                     self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
                                                     self.device, clamp_min=-10.0, clamp_max=10.0) # Wide clamps for normalized data
                         outputs_pgd = self.model.forward(adv_images_pgd, p_value=current_p_value_for_eval)
                         _, predicted_pgd = outputs_pgd.max(1)
                         total_pgd += targets.size(0)
                         correct_pgd += predicted_pgd.eq(targets).sum().item()
-                
+
                 eval_desc = f"Clean Acc: {100.*correct/total:.2f}%"
                 if self.args and self.args.eval_fgsm:
                     eval_desc += f" | FGSM Acc: {100.*correct_fgsm/total_fgsm if total_fgsm > 0 else 0:.2f}%"
@@ -793,6 +819,8 @@ class Trainer:
                     logger.info("No previous optimization state found, running initial optimization...")
                     self.best_p, _, _ = self.optimize_p()
 
+        self.best_model = None
+        self.best_acc = 0.0
         for epoch in range(start_epoch, epochs):
             logger.info(f"\nEpoch: {epoch+1}/{epochs}")
 
@@ -801,9 +829,12 @@ class Trainer:
             
             # Basic evaluation
             test_loss, test_acc = self.evaluate(p_value=self.best_p)
+            if test_acc > self.best_acc:
+                self.best_model = self.model
+                self.best_acc = test_acc
             
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            # if epoch % 5 == 0 or epoch == epochs - 1:
+            # if epoch % 15 == 0 or epoch == epochs - 1:
             metrics = self.evaluate_with_metrics(p_value=self.best_p, epoch=epoch, test_acc=test_acc, total_epochs=epochs)
             if 'feature_metrics' in metrics and metrics['feature_metrics']:
                 feature_metrics = metrics['feature_metrics']
@@ -877,7 +908,40 @@ class Trainer:
                 "best_acc": self.best_acc,
                 "best_p": self.best_p,
             }, is_best)
-        logger.info(f"Best test accuracy: {self.best_acc:.2f}%")
+        
+
+        self.model = self.best_model
+        del self.best_model
+        self.model.eval() # Ensure model is in eval mode
+        logger.info("Performing final evaluation on the best model (based on clean accuracy)...")
+        # Use 'epochs' (total epochs) for the epoch parameter to log it at the end of training timeline
+        final_metrics = self.evaluate_with_metrics(
+            p_value=self.best_p, # Use best_p from checkpoint
+            epoch=epochs, 
+            test_acc=self.best_acc, # Pass the best accuracy achieved
+            total_epochs=epochs
+        )
+        log_final_clean_acc = final_metrics.get('accuracy', 'N/A')
+        if isinstance(log_final_clean_acc, float): log_final_clean_acc = f"{log_final_clean_acc:.2f}%"
+
+        logger.info(f"Final evaluation metrics on best model (Clean Acc: {log_final_clean_acc}):")
+        if 'fgsm_accuracy' in final_metrics:
+            logger.info(f"  FGSM Robust Accuracy: {final_metrics['fgsm_accuracy']:.2f}%")
+        if 'pgd_accuracy' in final_metrics:
+            logger.info(f"  PGD Robust Accuracy: {final_metrics['pgd_accuracy']:.2f}%")
+        
+        if self.use_rama and 'feature_metrics' in final_metrics and final_metrics['feature_metrics']:
+            fm = final_metrics['feature_metrics']
+            # Helper to format feature metrics, avoiding errors if a key is missing
+            def fm_get(key, default_val='N/A'):
+                val = fm.get(key, default_val)
+                return f"{val:.4f}" if isinstance(val, (float, np.float32, np.float64)) else val
+
+            logger.info(f"  Feature metrics on best model (RAMA p_value: {checkpoint.get('best_p', self.best_p):.4f}):")
+            logger.info(f"    Fisher ratio before RAMA: {fm_get('fisher_ratio_before')}")
+            logger.info(f"    Fisher ratio after RAMA: {fm_get('fisher_ratio_after')}")
+            logger.info(f"    Fisher improvement: {fm_get('fisher_improvement')}x")
+        logger.info(f"Training completed! Best accuracy: {self.best_acc:.2f}%")
         return self.best_acc
 
 

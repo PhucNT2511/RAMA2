@@ -47,14 +47,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training with EfficientNet-B2 and RAMA Layers')
 
     # Training parameters
-    parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
-    parser.add_argument('--epochs', default=20, type=int, help='number of epochs')
+    parser.add_argument('--lr', default=1e-4, type=float, help='learning rate for AdamW')
+    parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--batch-size', default=128, type=int, help='batch size')
     parser.add_argument('--data-dir', default='./data', help='data directory')
     parser.add_argument('--checkpoint-dir', default='./checkpoints', help='checkpoint directory')
     parser.add_argument('--resume', action='store_true', help='resume from checkpoint')
     parser.add_argument('--num-workers', default=2, type=int, help='number of data loading workers')
     parser.add_argument('--seed', type=int, default=42, help='random seed')
+    parser.add_argument('--pretrained', action='store_true', default=True, help='whether to use pretrained ImageNet weights')
+    parser.add_argument('--no-pretrained', action='store_false', dest='pretrained', help='disable pretrained ImageNet weights')
     
     # RAMA configuration
     parser.add_argument('--use-rama', action='store_true', help='whether to use RAMA layers')
@@ -151,18 +153,21 @@ def main():
         num_classes=10, 
         use_rama=args.use_rama,
         rama_config=rama_config,
-        rama_type=args.rama_type
+        rama_type=args.rama_type,
+        pretrained=args.pretrained
     ).to(device)
 
     # Loss function and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(
+    optimizer = optim.AdamW(
         model.parameters(), 
         lr=args.lr, 
-        momentum=0.9, 
         weight_decay=5e-4
     )
     
+    # Add learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+
     # Resume from checkpoint if specified
     start_epoch = 0
     best_acc = 0
@@ -173,6 +178,8 @@ def main():
             checkpoint = torch.load(checkpoint_path)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            if 'scheduler_state_dict' in checkpoint:
+                scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
             start_epoch = checkpoint['epoch'] + 1
             best_acc = checkpoint['best_acc']
             logger.info(f"Loaded checkpoint '{checkpoint_path}' (epoch {checkpoint['epoch']})")
@@ -217,6 +224,7 @@ def main():
         testloader=testloader,
         criterion=criterion,
         optimizer=optimizer,
+        scheduler=scheduler,
         device=device,
         checkpoint_dir=os.path.join(exp_dir, "checkpoints"),
         bayes_opt_config=bayes_opt_config if args.use_hyperparameter_optimization else None,

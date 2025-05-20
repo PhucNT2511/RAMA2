@@ -410,6 +410,7 @@ class Trainer:
                     logger.info("No previous optimization state found, running initial optimization...")
                     self.best_p, _, _ = self.optimize_p()
 
+        best_model = None
         for epoch in range(start_epoch, epochs):
             logger.info(f"\nEpoch: {epoch+1}/{epochs}")
 
@@ -426,15 +427,20 @@ class Trainer:
             # Adversarial Evaluation if enabled
             fgsm_acc, pgd_acc = -1.0, -1.0 # Default if not evaluated
             fgsm_loss, pgd_loss = -1.0, -1.0
-            if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == epochs - 1):
+<<<<<<< HEAD
+            if test_acc > self.best_acc:
+                best_model = self.model
+=======
+            if epoch % 15 == 0 or epoch == epochs - 1:
                 if self.eval_fgsm:
                     fgsm_loss, fgsm_acc = self.evaluate_fgsm(p_value=self.best_p)
 
                 if self.eval_pgd:
                     pgd_loss, pgd_acc = self.evaluate_pgd(p_value=self.best_p)
+>>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
 
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            if epoch % 5 == 0 or epoch == epochs - 1:
+            if epoch % 15 == 0 or epoch == epochs - 1:
                 metrics = self.evaluate_with_metrics(p_value=self.best_p)
                 if 'feature_metrics' in metrics and metrics['feature_metrics']:
                     feature_metrics = metrics['feature_metrics']
@@ -549,6 +555,46 @@ class Trainer:
                 if self.use_rama and self.use_hyperparameter_optimization:
                     bayes_opt_path = os.path.join(self.checkpoint_dir, 'bayes_opt_state.json')
                     self.bayesian_optimizer.save_state(bayes_opt_path)
-                
+
+
+        self.model = best_model
+        if self.eval_fgsm:
+            fgsm_loss, fgsm_acc = self.evaluate_fgsm(p_value=self.best_p)
+            logger.info(f"Final FGSM Attack Results - Loss: {fgsm_loss:.4f} | Accuracy: {fgsm_acc:.2f}%")
+
+        if self.eval_pgd:
+            pgd_loss, pgd_acc = self.evaluate_pgd(p_value=self.best_p)
+            logger.info(f"Final PGD Attack Results - Loss: {pgd_loss:.4f} | Accuracy: {pgd_acc:.2f}%")
+
+        # Update original if-condition to avoid duplicating log messages
+        if not (self.eval_fgsm or self.eval_pgd):
+            logger.info(f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%")
+            logger.info(f"Test Loss: {test_loss:.4f} | Test Acc (Clean): {test_acc:.2f}%")
+            if self.use_rama and self.use_hyperparameter_optimization:
+                logger.info(f"Current p value: {self.best_p:.6f}")
+
+        # The rest of the Neptune and TensorBoard logging remains the same
+        if self.eval_fgsm or self.eval_pgd:
+            if self.use_rama and self.use_hyperparameter_optimization:
+                logger.info(f"Current p value: {self.best_p:.6f}")
+
+            # Log to Neptune if available
+            if self.neptune_run:
+                if self.eval_fgsm:
+                    self.neptune_run["Test/FGSM_Loss"].append(fgsm_loss)
+                    self.neptune_run["Test/FGSM_Accuracy"].append(fgsm_acc)
+                if self.eval_pgd:
+                    self.neptune_run["Test/PGD_Loss"].append(pgd_loss)
+                    self.neptune_run["Test/PGD_Accuracy"].append(pgd_acc)
+
+            # Log to TensorBoard if available
+            if self.writer:
+                if self.eval_fgsm:
+                    self.writer.add_scalar("Test/FGSM_Loss", fgsm_loss, epoch)
+                    self.writer.add_scalar("Test/FGSM_Accuracy", fgsm_acc, epoch)
+                if self.eval_pgd:
+                    self.writer.add_scalar("Test/PGD_Loss", pgd_loss, epoch)
+                    self.writer.add_scalar("Test/PGD_Accuracy", pgd_acc, epoch)
+
         logger.info(f"Best test accuracy: {self.best_acc:.2f}%")
         return self.best_acc

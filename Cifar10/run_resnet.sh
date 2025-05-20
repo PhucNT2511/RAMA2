@@ -72,5 +72,4 @@ CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT $BASE_ARGS $RESNET_RAMA_ARGS $ADVER
 echo "Finished: 4. ResNet-18 + AT (PGD) + RAMA"
 echo "-------------------------------------------------"
 
-echo "
-All ResNet-18 experiments finished."
+echo "All ResNet-18 experiments finished."

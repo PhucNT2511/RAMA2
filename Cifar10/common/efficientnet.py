@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torchvision.models import efficientnet_b2
+from torchvision.models import efficientnet_b2, EfficientNet_B2_Weights
 
 from common.rama_layers import BernoulliRAMALayer, GaussianRAMALayer
 
@@ -14,8 +14,9 @@ class EfficientNet(nn.Module):
         use_rama (bool): Whether to use RAMA layers. Default: False.
         rama_config (dict): Configuration for RAMA layers. Default: None.
         rama_type (str): Type of RAMA layer to use ('bernoulli' or 'gaussian'). Default: 'bernoulli'.
+        pretrained (bool): Whether to load ImageNet pretrained weights. Default: True.
     """
-    def __init__(self, num_classes=10, use_rama=False, rama_config=None, rama_type='bernoulli'):
+    def __init__(self, num_classes=10, use_rama=False, rama_config=None, rama_type='bernoulli', pretrained=True):
         super().__init__()
         self.use_rama = use_rama
         self.rama_type = rama_type
@@ -39,7 +40,11 @@ class EfficientNet(nn.Module):
                     'sqrt_dim': False,
                 }
 
-        self.backbone = efficientnet_b2(weights=None)
+        if pretrained:
+            weights = EfficientNet_B2_Weights.IMAGENET1K_V1
+        else:
+            weights = None
+        self.backbone = efficientnet_b2(weights=weights)
         self.feature_dim = self.backbone.classifier[1].in_features
         self.features_1 = nn.Sequential(*list(self.backbone.children())[:-1]) 
 

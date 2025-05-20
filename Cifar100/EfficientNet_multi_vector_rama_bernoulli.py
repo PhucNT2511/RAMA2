@@ -147,7 +147,7 @@ class EfficientNet(nn.Module):
                 'sqrt_dim': False,
             }
 
-        self.backbone = efficientnet_b2(weights=None)
+        self.backbone = efficientnet_b2(weights=torchvision.models.EfficientNet_B2_Weights.IMAGENET1K_V1)
         self.feature_dim = self.backbone.classifier[1].in_features
 
         self.features_1 = nn.Sequential(*list(self.backbone.children())[:-1]) 
@@ -222,18 +222,23 @@ class DataManager:
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
+        # ImageNet mean and std for normalization, and resize to 260x260 for EfficientNet-B2
+        imagenet_mean = [0.485, 0.456, 0.406]
+        imagenet_std = [0.229, 0.224, 0.225]
+        efficientnet_b2_image_size = 260
+
         self.transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.Resize(efficientnet_b2_image_size),
+            transforms.RandomCrop(efficientnet_b2_image_size, padding=4), # Adjusted padding if needed or use RandomResizedCrop
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.5071, 0.4865, 0.4409), 
-                                 (0.2673, 0.2564, 0.2762))
+            transforms.Normalize(imagenet_mean, imagenet_std)
         ])
         
         self.transform_test = transforms.Compose([
+            transforms.Resize(efficientnet_b2_image_size),
             transforms.ToTensor(),
-            transforms.Normalize((0.5071, 0.4865, 0.4409), 
-                                 (0.2673, 0.2564, 0.2762))
+            transforms.Normalize(imagenet_mean, imagenet_std)
         ])
         
     def get_loaders(self):
@@ -289,12 +294,14 @@ class Trainer:
     def __init__(self, model, trainloader, testloader, criterion, optimizer, 
                  device, checkpoint_dir, bayes_opt_config=None, use_rama: bool = False,
                  use_hyperparameter_optimization: bool = False,
-                 neptune_run: Optional[neptune.Run] = None, writer: Optional[SummaryWriter] = None, args: Optional[argparse.Namespace] = None):
+                 neptune_run: Optional[neptune.Run] = None, writer: Optional[SummaryWriter] = None, 
+                 args: Optional[argparse.Namespace] = None, scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None):
         self.model = model
         self.trainloader = trainloader
         self.testloader = testloader
         self.criterion = criterion
         self.optimizer = optimizer
+        self.scheduler = scheduler
         self.device = device
         self.checkpoint_dir = checkpoint_dir
         self.best_acc = 0
@@ -501,7 +508,7 @@ class Trainer:
                 # Define a model wrapper for attack functions that handles p_value
                 attack_model_wrapper = lambda imgs_for_attack: self.model.forward(imgs_for_attack, p_value=current_p_for_eval)
 
-                if test_acc > self.best_acc and (epoch % 15 == 0 or epoch == total_epochs - 1):
+                if epoch % 15 == 0 or epoch == total_epochs - 1:
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
                         adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
@@ -704,7 +711,7 @@ class Trainer:
             test_loss, test_acc = self.evaluate(p_value=self.best_p)
             
             # Detailed evaluation with feature metrics (once every 5 epochs to save time)
-            # if epoch % 5 == 0 or epoch == epochs - 1:
+            # if epoch % 15 == 0 or epoch == epochs - 1:
             metrics = self.evaluate_with_metrics(p_value=self.best_p, epoch=epoch, test_acc=test_acc, total_epochs=epochs)
             if 'feature_metrics' in metrics and metrics['feature_metrics']:
                 feature_metrics = metrics['feature_metrics']
@@ -771,13 +778,17 @@ class Trainer:
             is_best = test_acc > self.best_acc
             if is_best:
                 self.best_acc = test_acc
-            self.save_checkpoint({
-                "epoch": epoch,
-                "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "best_acc": self.best_acc,
-                "best_p": self.best_p,
-            }, is_best)
+                checkpoint_state = {
+                    "epoch": epoch,
+                    "model_state_dict": self.model.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "best_acc": self.best_acc,
+                    "best_p": self.best_p,
+                }
+                # Add scheduler state if it exists
+                if self.scheduler:
+                    checkpoint_state["scheduler_state_dict"] = self.scheduler.state_dict()
+                self.save_checkpoint(checkpoint_state, is_best)
         logger.info(f"Best test accuracy: {self.best_acc:.2f}%")
         return self.best_acc
 
