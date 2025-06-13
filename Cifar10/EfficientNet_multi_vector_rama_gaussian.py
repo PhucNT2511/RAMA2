@@ -919,13 +919,9 @@ def main():
     model = EfficientNet(
         num_classes=10, 
         use_rama=args.use_rama,
-<<<<<<< HEAD
         rama_config=rama_config,
         rama_type='gaussian',
         pretrained=args.pretrained
-=======
-        rama_config=rama_config
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
     ).to(device)
 
 

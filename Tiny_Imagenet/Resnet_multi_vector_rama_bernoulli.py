@@ -613,13 +613,9 @@ class Trainer:
                 # Define a model wrapper for attack functions that handles p_value
                 # The attack functions expect model(images) to return logits
                 wrapped_model_for_eval = ModelAttackWrapper(self.model, current_p_value_for_eval)
-<<<<<<< HEAD
 
                 if epoch % 15 == 0 or epoch == total_epochs - 1:
                     logger.info(f"Evaluating Adversarial Attacks at epoch {epoch}")
-=======
-                if epoch % 15 == 0 or epoch == total_epochs - 1:
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
                         # For TinyImageNet (normalized), default FGSM clamp to [0,1] might be an issue.
@@ -634,11 +630,7 @@ class Trainer:
                     if self.args and self.args.eval_pgd:
                         # Using wide clamps for normalized data as in Cifar100 examples
                         adv_images_pgd = pgd_attack(wrapped_model_for_eval, inputs.clone(), targets, 
-<<<<<<< HEAD
                                                     self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter, 
-=======
-                                                    self.args.epsilon, self.args.pgd_alpha, self.args.pgd_iter,
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
                                                     self.device, clamp_min=-10.0, clamp_max=10.0) 
                         outputs_pgd = self.model.forward(adv_images_pgd, p_value=p_value)
                         _, predicted_pgd = outputs_pgd.max(1)

@@ -617,16 +617,8 @@ class Trainer:
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
         
-<<<<<<< HEAD
                 if epoch % 15 == 0 or epoch == total_epochs - 1:
                     logger.info(f"Evaluating Adversarial Attacks at epoch {epoch}")
-=======
-                # Define a model wrapper for attack functions that handles p_value
-                # The attack functions expect model(images) to return logits
-                attack_model_wrapper = lambda imgs_for_attack: self.model.forward(imgs_for_attack, p_value=current_p_value_for_eval)
-
-                if epoch % 15 == 0 or epoch == total_epochs - 1:
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
                         adv_images_fgsm = fgsm_attack(wrapped_model_for_eval, inputs.clone(), targets, self.args.epsilon, self.device)

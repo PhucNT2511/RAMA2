@@ -241,10 +241,18 @@ class GaussianRAMALayer(nn.Module):
         else:
             self.sqrt_d = 1
             
-        # Initialize Gaussian projection matrix
-        projection = torch.randn(input_dim, output_dim) * sigma + mu
+        # # Initialize Gaussian projection matrix
+        # projection = torch.randn(input_dim, output_dim) * sigma + mu
+        # self.projection = nn.Parameter(projection, requires_grad=False)
+
+        # Initialize Orthogonal projection matrix
+        # torch.nn.init.orthogonal_ requires a 2D tensor, and works for input_dim >= output_dim or vice versa
+        projection = torch.empty(input_dim, output_dim)
+        nn.init.orthogonal_(projection)
+        # Optionally scale and shift by mu and sigma, to match previous Gaussian behavior
+        projection = projection * sigma + mu
         self.projection = nn.Parameter(projection, requires_grad=False)
-        
+
         # Add layer normalization for stabilizing the output distribution
         if use_normalization:
             self.norm = nn.LayerNorm(output_dim)

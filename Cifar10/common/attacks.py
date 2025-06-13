@@ -20,7 +20,6 @@ def fgsm_attack(model, images, labels, epsilon, device, clamp_min=0, clamp_max=1
     """
     images_for_attack = images.clone().detach().to(device)
     labels = labels.clone().detach().to(device)
-<<<<<<< HEAD
 
     with torch.enable_grad(): # Ensure gradients are enabled
         images_for_attack.requires_grad = True
@@ -36,25 +35,6 @@ def fgsm_attack(model, images, labels, epsilon, device, clamp_min=0, clamp_max=1
     # Clip perturbed image. Note: CIFAR100 script uses wide clamps for PGD.
     # This FGSM clamp might need adjustment if data isn't [0,1].
     perturbed_image = torch.clamp(perturbed_image, 0, 1) 
-=======
-    images.requires_grad_(True)
-
-    model.eval() # Ensure model is in evaluation mode
-    
-    with torch.enable_grad():  # Temporarily re-enable gradient calculation
-        outputs = model(images)
-        loss = nn.CrossEntropyLoss()(outputs, labels)
-        model.zero_grad() # It's good practice to zero gradients before backward pass
-        loss.backward()
-
-    # Collect the gradient of the loss w.r.t. the input image
-    data_grad = images.grad.data
-
-    # Create the perturbed image by adjusting each pixel of the input image
-    perturbed_image = images + epsilon * data_grad.sign()
-    # Clip to the specified range (defaults to [0,1] for backward compatibility)
-    perturbed_image = torch.clamp(perturbed_image, min=clamp_min, max=clamp_max)
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
     return perturbed_image.detach()
 
 
@@ -90,7 +70,6 @@ def pgd_attack(model, images, labels, epsilon, alpha, num_iter, device, clamp_mi
 
 
     for _ in range(num_iter):
-<<<<<<< HEAD
         with torch.enable_grad(): # Ensure gradients are enabled for each iteration
             adv_images.requires_grad = True
             outputs = model(adv_images)
@@ -99,18 +78,6 @@ def pgd_attack(model, images, labels, epsilon, alpha, num_iter, device, clamp_mi
             loss.backward()
             grad = adv_images.grad.data
         
-=======
-        adv_images.requires_grad_(True)
-        with torch.enable_grad():  # Temporarily re-enable gradient calculation for each iteration
-            outputs = model(adv_images)
-            loss = nn.CrossEntropyLoss()(outputs, labels)
-            model.zero_grad() # Zero gradients before backward pass
-            loss.backward()
-
-        # Collect the gradient
-        grad = adv_images.grad.data
-
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
         # Perform PGD step
         adv_images = adv_images.detach() + alpha * grad.sign()
         

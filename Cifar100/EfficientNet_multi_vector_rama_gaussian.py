@@ -503,7 +503,6 @@ class Trainer:
                 
 
                 if epoch % 15 == 0 or epoch == total_epochs - 1:
-<<<<<<< HEAD
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
                         adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
@@ -511,16 +510,6 @@ class Trainer:
                         _, predicted_fgsm = outputs_fgsm.max(1)
                         total_fgsm += targets.size(0)
                         correct_fgsm += predicted_fgsm.eq(targets).sum().item()
-=======
-                    with torch.enable_grad():
-                        # FGSM Attack Evaluation
-                        if self.args and self.args.eval_fgsm:
-                            adv_images_fgsm = fgsm_attack(attack_model_wrapper, inputs.clone(), targets, self.args.epsilon, self.device)
-                            outputs_fgsm = self.model.forward(adv_images_fgsm, lambda_value=current_lambda_for_eval)
-                            _, predicted_fgsm = outputs_fgsm.max(1)
-                            total_fgsm += targets.size(0)
-                            correct_fgsm += predicted_fgsm.eq(targets).sum().item()
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
 
                         # PGD Attack Evaluation
                         if self.args and self.args.eval_pgd:

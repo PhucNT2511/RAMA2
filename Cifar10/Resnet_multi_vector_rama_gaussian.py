@@ -67,9 +67,9 @@ def parse_args():
     parser.add_argument('--lambda-value', default=0.3, type=float, help='Lambda_value for RAMA')
     parser.add_argument('--sqrt-dim', action='store_true', help='Whether to divide by sqrt(d)')
     parser.add_argument('--use-normalization', action='store_true', help='use layer normalization in RAMA layers')
-    parser.add_argument('--activation', default='relu', choices=['relu', 'leaky_relu', 'tanh', 'sigmoid'],
+    parser.add_argument('--activation', default='relu', choices=['relu', 'leaky_relu', 'tanh', 'sigmoid', 'silu'],
                         help='activation function for RAMA layers')
-    
+
     # RAMA position configuration
     parser.add_argument('--rama-positions', default='layer1,layer2,layer3,final',
                        type=str, help='comma-separated list of positions to apply RAMA (options: layer1,layer2,layer3,layer4,final)')

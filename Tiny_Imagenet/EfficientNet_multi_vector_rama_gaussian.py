@@ -493,7 +493,6 @@ class Trainer:
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
 
-<<<<<<< HEAD
                 if epoch % 15 == 0 or epoch == total_epochs - 1:
                     # FGSM Attack Evaluation
                     if self.args and self.args.eval_fgsm:
@@ -512,10 +511,6 @@ class Trainer:
                         _, predicted_pgd = outputs_pgd.max(1)
                         total_pgd += targets.size(0)
                         correct_pgd += predicted_pgd.eq(targets).sum().item()
-=======
-                # Define a model wrapper for attack functions that handles lambda_value
-                attack_model_wrapper = AttackModelWrapper(self.model, current_lambda_for_eval).to(self.device)
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
                 
 
                 if epoch % 15 == 0 or epoch == total_epochs - 1:

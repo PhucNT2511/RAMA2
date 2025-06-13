@@ -73,66 +73,41 @@ echo "-------------------------------------------------"
 # # ResNet-18 Gaussian RAMA Experiments for Tiny ImageNet
 # # ==============================================================================
 # PYTHON_SCRIPT_GAUSSIAN="Tiny_Imagenet/Resnet_multi_vector_rama_gaussian.py"
-<<<<<<< HEAD
 # RESNET_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 0.2 --activation silu --sqrt-dim False"
 
 # echo -e "\n\n-------------------------------------------------"
-=======
-# RESNET_RAMA_GAUSSIAN_ARGS="--use-rama --use-normalization --lambda-value 0.2 --activation relu --sqrt-dim False"
-
-# echo "\n\n-------------------------------------------------"
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
 # echo "Starting ResNet-18 (Gaussian RAMA) Experiments for Tiny ImageNet"
 # echo "Evaluations enabled: FGSM=$EVAL_FGSM, PGD=$EVAL_PGD"
 # echo "-------------------------------------------------"
 
 # # 5. ResNet-18 Baseline (Gaussian script, no RAMA) - Note: This is effectively the same as #1 but uses the Gaussian script
-<<<<<<< HEAD
 # echo -e "\nRunning: 5. ResNet-18 Baseline (Gaussian Script)"
 # EXP5_DIR="$CHECKPOINT_BASE_DIR/ResNet18_Gaussian_baseline"
 # mkdir -p $EXP5_DIR
 # echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS --checkpoint-dir $EXP5_DIR $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS"
 # CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS --checkpoint-dir $EXP5_DIR $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS
-=======
-# echo "\nRunning: 5. ResNet-18 Baseline (Gaussian Script)"
-# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS"
-# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_EVAL_FLAGS
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
 # echo "Finished: 5. ResNet-18 Baseline (Gaussian Script)"
 # echo "-------------------------------------------------"
 
 # # 6. ResNet-18 + AT (PGD) (Gaussian script, no RAMA)
-<<<<<<< HEAD
 # echo -e "\nRunning: 6. ResNet-18 + AT (PGD) (Gaussian Script)"
 # EXP6_DIR="$CHECKPOINT_BASE_DIR/ResNet18_Gaussian_AT_PGD"
 # mkdir -p $EXP6_DIR
 # echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS --checkpoint-dir $EXP6_DIR $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS"
 # CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS --checkpoint-dir $EXP6_DIR $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS
-=======
-# echo "\nRunning: 6. ResNet-18 + AT (PGD) (Gaussian Script)"
-# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS"
-# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
 # echo "Finished: 6. ResNet-18 + AT (PGD) (Gaussian Script)"
 # echo "-------------------------------------------------"
 
 # # 7. ResNet-18 + Gaussian RAMA
-<<<<<<< HEAD
 # echo -e "\nRunning: 7. ResNet-18 + Gaussian RAMA"
 # EXP7_DIR="$CHECKPOINT_BASE_DIR/ResNet18_Gaussian_RAMA"
 # mkdir -p $EXP7_DIR
 # echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS --checkpoint-dir $EXP7_DIR $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS"
 # CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS --checkpoint-dir $EXP7_DIR $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS
-=======
-# echo "\nRunning: 7. ResNet-18 + Gaussian RAMA"
-# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS"
-# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_EVAL_FLAGS
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
 # echo "Finished: 7. ResNet-18 + Gaussian RAMA"
 # echo "-------------------------------------------------"
 
 # # 8. ResNet-18 + Gaussian RAMA + AT (PGD)
-<<<<<<< HEAD
 # echo -e "\nRunning: 8. ResNet-18 + Gaussian RAMA + AT (PGD)"
 # EXP8_DIR="$CHECKPOINT_BASE_DIR/ResNet18_Gaussian_RAMA_AT_PGD"
 # mkdir -p $EXP8_DIR
@@ -142,12 +117,3 @@ echo "-------------------------------------------------"
 # echo "-------------------------------------------------"
 
 echo -e "\nAll ResNet-18 Tiny ImageNet experiments finished."
-=======
-# echo "\nRunning: 8. ResNet-18 + Gaussian RAMA + AT (PGD)"
-# echo "Command: CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS"
-# CUDA_VISIBLE_DEVICES=0 python $PYTHON_SCRIPT_GAUSSIAN $BASE_ARGS $DATASET_ARGS $RESNET_RAMA_GAUSSIAN_ARGS $ADVERSARIAL_TRAINING_FLAGS_PGD $ADVERSARIAL_EVAL_FLAGS
-# echo "Finished: 8. ResNet-18 + Gaussian RAMA + AT (PGD)"
-# echo "-------------------------------------------------"
-
-echo "\nAll ResNet-18 Tiny ImageNet experiments finished."
->>>>>>> 8d12459f1b5b05b98dc3d4a15fc76dd2387c9a7c
